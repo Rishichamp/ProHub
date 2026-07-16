@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Simplified P+H letterform, derived from ProHub_Logomark_Indigo.svg,
+         rescaled to fit the adaptive-icon safe zone (small-size legible) -->
+    <group>
+        <path
+            android:pathData="M21.52,19 L21.52,72.2 M86.48,19 L86.48,72.2"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="7"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"/>
+        <path
+            android:pathData="M21.52,19 Q38.32,13.4 49.52,19 Q60.72,24.6 49.52,33 Q35.52,38.6 21.52,33"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="7"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:fillColor="#00000000"/>
+        <path
+            android:pathData="M21.52,44.2 L86.48,44.2"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="7"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"/>
+        <path
+            android:pathData="M86.48,19 Q73.32,13.4 63.52,19 Q55.12,24.6 63.52,33 Q74.72,38.6 86.48,33"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="7"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:fillColor="#00000000"/>
+        <path
+            android:pathData="M21.52,72.2 L35.52,80.6 M86.48,72.2 L71.92,80.6 M35.52,80.6 L54,89 M71.92,80.6 L54,89"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="7"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:fillColor="#00000000"/>
+    </group>
+    <!-- Simplified neural hub: center node + 4 key connections (reduced from 7 for small-size clarity) -->
+    <group>
+        <path
+            android:pathData="M54,45.6 L41.12,27.4 M54,45.6 L66.88,27.4 M54,45.6 L46.72,61 M54,45.6 L61.28,61"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="3"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"/>
+        <path android:pathData="M59,45.6 a5,5 0 1,1 -10,0 a5,5 0 1,1 10,0 z" android:fillColor="#FFFFFF"/>
+        <path android:pathData="M44.62,27.4 a3.5,3.5 0 1,1 -7,0 a3.5,3.5 0 1,1 7,0 z" android:fillColor="#FFFFFF"/>
+        <path android:pathData="M70.38,27.4 a3.5,3.5 0 1,1 -7,0 a3.5,3.5 0 1,1 7,0 z" android:fillColor="#FFFFFF"/>
+        <path android:pathData="M50.22,61 a3.5,3.5 0 1,1 -7,0 a3.5,3.5 0 1,1 7,0 z" android:fillColor="#FFFFFF"/>
+        <path android:pathData="M64.78,61 a3.5,3.5 0 1,1 -7,0 a3.5,3.5 0 1,1 7,0 z" android:fillColor="#FFFFFF"/>
+    </group>
+</vector>

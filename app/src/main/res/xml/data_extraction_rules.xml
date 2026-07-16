@@ -1,0 +1,6 @@
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="secure_prefs.xml"/>
+        <exclude domain="database" path="prohub_db"/>
+    </cloud-backup>
+</data-extraction-rules>

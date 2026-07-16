@@ -1,0 +1,1822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#08090D">
+<meta name="description" content="ProHub — Professional Productivity Command Center">
+<title>ProHub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+:root {
+  --bg: #08090D; --surface: #0F1117; --card: #161820; --card2: #1C1E2A; --card3: #21232F;
+  --border: #252736; --border2: #2E3040; --indigo: #6366F1; --indigo2: #4F46E5;
+  --indigo-glow: rgba(99,102,241,0.18); --purple: #8B5CF6; --green: #10B981;
+  --red: #EF4444; --gold: #F59E0B; --blue: #3B82F6; --text: #E8E9F0;
+  --text2: #A8AAB8; --muted: #5A5C6E; --radius: 18px; --radius-sm: 12px;
+  --radius-xs: 8px; --radius-pill: 999px; --glass: rgba(14,15,20,0.85);
+  --glass-border: rgba(255,255,255,0.07);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body, #root { height: 100dvh; width: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 400; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+#root { max-width: 480px; margin: 0 auto; position: relative; }
+h1, h2, h3, h4, h5, h6 { font-family: 'Syne', sans-serif; font-weight: 700; letter-spacing: -0.02em; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes slideUpFade { from { opacity:0; transform:translateY(40px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+@keyframes discSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+@keyframes waveBar { 0%,100% { height:8px; } 50% { height:28px; } }
+.glass { background: var(--glass); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); border: 1px solid var(--glass-border); }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.card:active { transform: scale(0.98); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border-radius: var(--radius-sm); border: none; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s ease; color: white; touch-action: manipulation; position: relative; overflow: hidden; }
+.btn-primary { background: linear-gradient(135deg, var(--indigo), var(--purple)); box-shadow: 0 4px 16px var(--indigo-glow); }
+.btn-secondary { background: var(--card2); border: 1px solid var(--border2); color: var(--text); }
+input, textarea, select { width: 100%; padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--card2); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 16px; outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+input:focus, textarea:focus, select:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+.app-shell { display: flex; flex-direction: column; height: 100dvh; width: 100%; position: relative; }
+.header { height: 58px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background: var(--surface); border-bottom: 1px solid var(--border); z-index: 100; flex-shrink: 0; }
+.logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; background: linear-gradient(135deg, var(--indigo), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.live-clock { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px; color: var(--text2); font-variant-numeric: tabular-nums; }
+.content-area { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom)); animation: fadeUp 0.4s ease; }
+.nav-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+.nav-overlay.open { opacity: 1; pointer-events: auto; }
+.nav-panel { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: var(--surface); border-right: 1px solid var(--border); z-index: 201; transform: translateX(-100%); transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1); display: flex; flex-direction: column; }
+.nav-panel.open { transform: translateX(0); }
+.nav-user-card { padding: 24px 20px; background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.05)); border-bottom: 1px solid var(--border); }
+.nav-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, var(--indigo), var(--purple)); display: flex; align-items: center; justify-content: center; font-family: 'Syne'; font-weight: 700; font-size: 20px; color: white; margin-bottom: 12px; }
+.nav-item { display: flex; align-items: center; gap: 14px; padding: 12px 20px; cursor: pointer; transition: background 0.15s ease; position: relative; }
+.nav-item:hover { background: var(--card); }
+.nav-item.active { background: rgba(99,102,241,0.08); }
+.nav-item.active::before { content:''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; background: var(--indigo); border-radius: 0 3px 3px 0; }
+.nav-badge { margin-left: auto; background: var(--red); color: white; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-pill); min-width: 20px; text-align: center; }
+.auth-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100dvh; padding: 24px; animation: fadeUp 0.5s ease; }
+.auth-logo { font-family: 'Syne'; font-weight: 800; font-size: 42px; background: linear-gradient(135deg, var(--indigo), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 8px; }
+.auth-card { width: 100%; max-width: 360px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: 0 16px 48px rgba(0,0,0,0.4); }
+.auth-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+.auth-tab { flex: 1; padding: 10px; border-radius: var(--radius-xs); border: 1px solid var(--border); background: transparent; color: var(--text2); font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+.auth-tab.active { background: var(--indigo); color: white; border-color: var(--indigo); }
+.auth-input-group { margin-bottom: 16px; }
+.auth-input-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+.auth-submit { width: 100%; padding: 14px; margin-top: 8px; }
+.metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.metric-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; position: relative; overflow: hidden; }
+.metric-glow { position: absolute; width: 60px; height: 60px; border-radius: 50%; filter: blur(24px); opacity: 0.4; top: -10px; right: -10px; }
+.metric-icon-bubble { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 10px; }
+.metric-value { font-family: 'Syne'; font-weight: 700; font-size: 22px; color: var(--text); }
+.metric-label { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.coming-up-strip, .now-playing-strip, .notif-summary-strip { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; }
+.strip-content { flex: 1; }
+.strip-title { font-weight: 600; font-size: 14px; color: var(--text); }
+.strip-sub { font-size: 12px; color: var(--text2); }
+.strip-action { color: var(--indigo); font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.quick-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.quick-chip { padding: 8px 14px; border-radius: var(--radius-pill); background: var(--card2); border: 1px solid var(--border); font-size: 13px; color: var(--text2); cursor: pointer; transition: all 0.2s ease; }
+.quick-chip:hover { border-color: var(--indigo); color: var(--indigo); }
+.tt-setup-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; padding: 24px 20px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); z-index: 150; animation: slideUpFade 0.35s ease; max-height: 85dvh; overflow-y: auto; }
+.tt-grid { display: grid; grid-template-columns: 60px 1fr; gap: 8px 12px; margin-top: 16px; }
+.tt-hour-label { font-size: 12px; color: var(--muted); text-align: right; padding-top: 10px; }
+.tt-slot { background: var(--card2); border: 1px solid var(--border); border-radius: var(--radius-xs); padding: 8px 10px; font-size: 13px; }
+.tt-slot input, .tt-slot select { background: transparent; border: none; padding: 0; font-size: 13px; width: 100%; }
+.tt-timeline { position: relative; padding-left: 48px; min-height: 200px; }
+.tt-timeline-line { position: absolute; left: 20px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+.tt-now-line { position: absolute; left: 14px; right: 0; height: 2px; background: var(--red); z-index: 10; }
+.tt-now-dot { position: absolute; left: 10px; width: 10px; height: 10px; background: var(--red); border-radius: 50%; animation: pulse 1.5s ease infinite; z-index: 11; }
+.tt-block { position: absolute; left: 48px; right: 0; border-radius: var(--radius-xs); padding: 8px 12px; border-left: 3px solid; font-size: 13px; }
+.tt-block-title { font-weight: 600; }
+.tt-block-time { font-size: 11px; opacity: 0.7; }
+.tt-analysis-bar { height: 8px; border-radius: var(--radius-pill); background: var(--card2); overflow: hidden; margin: 6px 0; }
+.tt-analysis-fill { height: 100%; border-radius: var(--radius-pill); transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.ex-hero { border-radius: var(--radius); padding: 24px; margin-bottom: 16px; position: relative; overflow: hidden; text-align: center; }
+.ex-hero-disc { width: 80px; height: 80px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15), transparent 50%), radial-gradient(circle, var(--card3) 0%, var(--card3) 35%, var(--border) 36%, var(--border) 38%, var(--card2) 39%, var(--card2) 55%, var(--border) 56%, var(--border) 58%, transparent 59%); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; animation: discSpin 8s linear infinite; }
+.ex-hero-disc::after { content:''; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); }
+.ex-timer { font-family: 'Syne'; font-weight: 700; font-size: 48px; letter-spacing: -0.02em; }
+.ex-controls { display: flex; gap: 12px; justify-content: center; margin-top: 16px; }
+.ex-control-btn { width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--border2); background: var(--card2); color: var(--text); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
+.ex-control-btn:active { transform: scale(0.92); }
+.ex-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+.ex-item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 8px; text-align: center; cursor: pointer; transition: all 0.2s ease; }
+.ex-item:hover { border-color: var(--indigo); }
+.ex-item.active { border-color: var(--indigo); background: rgba(99,102,241,0.08); }
+.ex-item-icon { font-size: 24px; margin-bottom: 6px; }
+.ex-item-name { font-size: 11px; font-weight: 600; color: var(--text2); }
+.music-player { text-align: center; padding: 24px 0; }
+.music-vinyl { width: 200px; height: 200px; border-radius: 50%; margin: 0 auto 24px; background: radial-gradient(circle at 50% 50%, var(--bg) 0%, var(--bg) 8%, transparent 9%), radial-gradient(circle at 50% 50%, var(--card3) 10%, var(--card3) 28%, var(--border) 29%, var(--border) 30%, var(--card2) 31%, var(--card2) 46%, var(--border) 47%, var(--border) 48%, var(--card) 49%, var(--card) 64%, var(--border) 65%, var(--border) 66%, transparent 67%); box-shadow: 0 20px 60px rgba(0,0,0,0.5); position: relative; animation: discSpin 3s linear infinite; }
+.music-vinyl.paused { animation-play-state: paused; }
+.music-vinyl-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Syne'; font-weight: 700; font-size: 14px; color: var(--text2); animation: discSpin 3s linear infinite reverse; }
+.music-seek { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.music-seek-time { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; width: 36px; }
+.music-seek-track { flex: 1; height: 4px; background: var(--card2); border-radius: var(--radius-pill); position: relative; cursor: pointer; }
+.music-seek-fill { height: 100%; background: linear-gradient(90deg, var(--indigo), var(--purple)); border-radius: var(--radius-pill); position: relative; }
+.music-seek-thumb { position: absolute; right: -6px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; background: white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+.music-controls { display: flex; align-items: center; justify-content: center; gap: 20px; }
+.music-btn { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
+.music-btn.play { width: 64px; height: 64px; background: linear-gradient(135deg, var(--indigo), var(--purple)); border: none; font-size: 24px; }
+.wave-eq { display: flex; align-items: flex-end; gap: 3px; height: 28px; justify-content: center; }
+.wave-bar { width: 4px; background: linear-gradient(to top, var(--indigo), var(--purple)); border-radius: 2px; animation: waveBar 0.8s ease infinite; }
+.wave-bar:nth-child(2) { animation-delay: 0.1s; }
+.wave-bar:nth-child(3) { animation-delay: 0.2s; }
+.ai-tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+.ai-tab { padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--card); font-size: 13px; color: var(--text2); cursor: pointer; transition: all 0.2s ease; }
+.ai-tab.active { background: var(--indigo); color: white; border-color: var(--indigo); }
+.ai-chat-container { display: flex; flex-direction: column; height: calc(100dvh - 200px); }
+.ai-messages { flex: 1; overflow-y: auto; padding: 8px 0; }
+.ai-message { display: flex; gap: 10px; margin-bottom: 14px; animation: fadeUp 0.3s ease; }
+.ai-message.user { flex-direction: row-reverse; }
+.ai-avatar { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.ai-avatar.bot { background: linear-gradient(135deg, var(--indigo), var(--purple)); }
+.ai-avatar.user { background: var(--card2); border: 1px solid var(--border); }
+.ai-bubble { max-width: 80%; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 14px; line-height: 1.6; }
+.ai-bubble.bot { background: var(--card2); border: 1px solid var(--border); color: var(--text); }
+.ai-bubble.user { background: var(--indigo); color: white; }
+.ai-input-area { display: flex; gap: 10px; padding: 12px 0; border-top: 1px solid var(--border); }
+.ai-input-area textarea { flex: 1; resize: none; min-height: 44px; max-height: 110px; padding: 10px 14px; }
+.ai-send-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--indigo); color: white; border: none; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ai-typing { display: flex; gap: 4px; padding: 8px 12px; }
+.ai-typing-dot { width: 8px; height: 8px; background: var(--muted); border-radius: 50%; animation: pulse 1.4s ease infinite; }
+.ai-news-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 10px; animation: fadeUp 0.3s ease; }
+.ai-news-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 600; margin-bottom: 6px; }
+.ai-news-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.ai-news-summary { font-size: 13px; color: var(--text2); line-height: 1.5; }
+.ai-news-meta { display: flex; gap: 12px; margin-top: 8px; font-size: 11px; color: var(--muted); }
+.ai-news-link { color: var(--indigo); cursor: pointer; font-weight: 600; }
+.task-section { margin-bottom: 20px; }
+.task-section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.task-section-title { font-family: 'Syne'; font-weight: 600; font-size: 14px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
+.task-count { background: var(--card2); padding: 2px 8px; border-radius: var(--radius-pill); font-size: 11px; color: var(--muted); }
+.task-item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s ease; position: relative; overflow: hidden; }
+.task-item:hover { border-color: var(--border2); }
+.task-item.completed { opacity: 0.5; }
+.task-checkbox { width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--border2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; transition: all 0.2s ease; }
+.task-checkbox.checked { background: var(--green); border-color: var(--green); }
+.task-content { flex: 1; }
+.task-title { font-weight: 500; font-size: 14px; color: var(--text); }
+.task-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.task-actions { display: flex; gap: 8px; opacity: 0; transition: opacity 0.2s ease; }
+.task-item:hover .task-actions { opacity: 1; }
+.task-action-btn { width: 28px; height: 28px; border-radius: 6px; border: none; background: var(--card2); color: var(--text2); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.task-fab { position: fixed; bottom: calc(24px + env(safe-area-inset-bottom)); right: 20px; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--indigo), var(--purple)); color: white; font-size: 24px; border: none; cursor: pointer; box-shadow: 0 4px 20px var(--indigo-glow); display: flex; align-items: center; justify-content: center; z-index: 90; transition: transform 0.2s ease; }
+.task-fab:active { transform: scale(0.92); }
+.task-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 300; display: flex; align-items: flex-end; justify-content: center; animation: fadeIn 0.2s ease; }
+.task-modal { width: 100%; max-width: 480px; background: var(--surface); border-radius: var(--radius) var(--radius) 0 0; padding: 24px 20px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); animation: slideUpFade 0.3s ease; }
+.notif-filter-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.notif-filter-tab { padding: 6px 14px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--card); font-size: 12px; color: var(--text2); cursor: pointer; }
+.notif-filter-tab.active { background: var(--indigo); color: white; border-color: var(--indigo); }
+.notif-app-chips { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; }
+.notif-app-chip { padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--card); font-size: 11px; color: var(--text2); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.notif-app-chip.active { border-color: var(--indigo); color: var(--indigo); }
+.notif-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 10px; border-left: 3px solid var(--indigo); animation: fadeUp 0.3s ease; }
+.notif-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.notif-app-emoji { font-size: 20px; }
+.notif-app-name { font-weight: 600; font-size: 13px; }
+.notif-sender { font-size: 12px; color: var(--text2); }
+.notif-summary { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 10px; }
+.notif-actions { display: flex; gap: 8px; }
+.notif-action-btn { padding: 6px 12px; border-radius: var(--radius-xs); border: 1px solid var(--border); background: var(--card2); font-size: 12px; color: var(--text2); cursor: pointer; }
+.settings-section { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 12px; overflow: hidden; }
+.settings-section-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; cursor: pointer; }
+.settings-section-title { font-weight: 600; font-size: 14px; }
+.settings-section-chevron { transition: transform 0.2s ease; color: var(--muted); }
+.settings-section.open .settings-section-chevron { transform: rotate(180deg); }
+.settings-section-body { padding: 0 16px 16px; display: none; }
+.settings-section.open .settings-section-body { display: block; animation: fadeUp 0.2s ease; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.settings-row:last-child { border-bottom: none; }
+.settings-label { font-size: 14px; color: var(--text); }
+.settings-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.settings-value { font-size: 13px; color: var(--text2); }
+.toggle-switch { width: 44px; height: 24px; border-radius: var(--radius-pill); background: var(--card2); border: 1px solid var(--border); position: relative; cursor: pointer; transition: background 0.2s ease; }
+.toggle-switch.on { background: var(--indigo); border-color: var(--indigo); }
+.toggle-switch-knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: white; transition: transform 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.toggle-switch.on .toggle-switch-knob { transform: translateX(20px); }
+.toast { position: fixed; bottom: calc(80px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 20px; font-size: 14px; color: var(--text); z-index: 500; box-shadow: 0 8px 32px rgba(0,0,0,0.4); animation: fadeUp 0.3s ease; display: flex; align-items: center; gap: 10px; max-width: 90%; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 400; display: flex; align-items: center; justify-content: center; padding: 20px; animation: fadeIn 0.2s ease; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 360px; box-shadow: 0 24px 64px rgba(0,0,0,0.5); animation: fadeUp 0.3s ease; }
+.modal-title { font-family: 'Syne'; font-weight: 700; font-size: 18px; margin-bottom: 8px; }
+.modal-text { font-size: 14px; color: var(--text2); margin-bottom: 20px; line-height: 1.5; }
+.modal-actions { display: flex; gap: 10px; }
+.modal-actions .btn { flex: 1; }
+.section-title { font-family: 'Syne'; font-weight: 700; font-size: 20px; margin-bottom: 16px; }
+.section-subtitle { font-size: 14px; color: var(--text2); margin-bottom: 16px; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+.empty-state-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+.empty-state-text { font-size: 14px; }
+.file-banner { background: var(--gold); color: var(--bg); padding: 10px 16px; font-size: 13px; font-weight: 600; text-align: center; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+const EXERCISE_OPTIONS = [
+  { id:'running',name:'Running',icon:'🏃',color:'#EF4444',colorLight:'rgba(239,68,68,0.1)' },
+  { id:'cardio',name:'Cardio',icon:'🔥',color:'#F97316',colorLight:'rgba(249,115,22,0.1)' },
+  { id:'stretching',name:'Stretching',icon:'🧘',color:'#10B981',colorLight:'rgba(16,185,129,0.1)' },
+  { id:'strength',name:'Strength',icon:'💪',color:'#8B5CF6',colorLight:'rgba(139,92,246,0.1)' },
+  { id:'walking',name:'Walking',icon:'🚶',color:'#3B82F6',colorLight:'rgba(59,130,246,0.1)' },
+  { id:'yoga',name:'Yoga',icon:'🌿',color:'#10B981',colorLight:'rgba(16,185,129,0.1)' },
+  { id:'cycling',name:'Cycling',icon:'🚴',color:'#EC4899',colorLight:'rgba(236,72,153,0.1)' },
+  { id:'custom',name:'Custom',icon:'⚡',color:'#F59E0B',colorLight:'rgba(245,158,11,0.1)' },
+];
+
+const TT_TYPES = {
+  work:{label:'Work',color:'#6366F1'},study:{label:'Study',color:'#8B5CF6'},
+  exercise:{label:'Exercise',color:'#10B981'},meal:{label:'Meal',color:'#F59E0B'},
+  sleep:{label:'Sleep',color:'#3B82F6'},social:{label:'Social',color:'#EC4899'},
+  commute:{label:'Commute',color:'#F97316'},free:{label:'Free',color:'#5A5C6E'}
+};
+
+const DEMO_SONGS = [
+  {id:'s1',name:'Deep Focus',artist:'ProHub Audio',playlist:'focus'},
+  {id:'s2',name:'Flow State',artist:'ProHub Audio',playlist:'focus'},
+  {id:'s3',name:'Power Lift',artist:'ProHub Audio',playlist:'workout'},
+  {id:'s4',name:'Sprint Mode',artist:'ProHub Audio',playlist:'workout'},
+  {id:'s5',name:'Midnight Rain',artist:'ProHub Audio',playlist:'relax'},
+  {id:'s6',name:'Starlight',artist:'ProHub Audio',playlist:'relax'},
+];
+
+function saveData(key,val){try{localStorage.setItem('ph_'+key,JSON.stringify(val));}catch(e){}}
+function loadData(key,def){try{const v=localStorage.getItem('ph_'+key);return v?JSON.parse(v):def;}catch(e){return def;}}
+function saveUser(uid,key,val){saveData('u_'+uid+'_'+key,val);}
+function loadUser(uid,key,def){return loadData('u_'+uid+'_'+key,def);}
+function hashPwd(s){let h=5381;for(let c of s)h=((h<<5)+h)^c.charCodeAt(0);return(h>>>0).toString(36);}
+function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
+function isFileProt(){return window.location.protocol==='file:';}
+function formatTime(secs){const h=Math.floor(secs/3600),m=Math.floor((secs%3600)/60),s=secs%60;if(h>0)return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;return`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;}
+function formatDuration(secs){if(secs<60)return`${secs}s`;if(secs<3600)return`${Math.floor(secs/60)}m`;const h=Math.floor(secs/3600),m=Math.floor((secs%3600)/60);return m>0?`${h}h ${m}m`:`${h}h`;}
+function toMins(hhmm){const[h,m]=hhmm.split(':').map(Number);return h*60+m;}
+function toHHMM(mins){const h=Math.floor(mins/60),m=mins%60;return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;}
+function fmt12(hhmm){const[h,m]=hhmm.split(':').map(Number);const ampm=h>=12?'PM':'AM';const h12=h%12||12;return`${h12}:${String(m).padStart(2,'0')} ${ampm}`;}
+function getGreeting(){const hour=new Date().getHours();const dayIdx=new Date().getDay();const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];let timeLabel;if(hour>=0&&hour<5)timeLabel='Late Night';else if(hour<9)timeLabel='Morning';else if(hour<12)timeLabel='Late Morning';else if(hour<17)timeLabel='Afternoon';else if(hour<21)timeLabel='Evening';else timeLabel='Night';return{timeLabel,dayName:dayNames[dayIdx]};}
+
+function GoalRing({size=80,progress=0,strokeWidth=6,color}){const r=(size-strokeWidth)/2;const c=2*Math.PI*r;const offset=c-(Math.min(progress,100)/100)*c;const ringColor=progress<50?'#F97316':progress<100?'#6366F1':'#10B981';return(<svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{transform:'rotate(-90deg)'}}><circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#252736" strokeWidth={strokeWidth}/><circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color||ringColor} strokeWidth={strokeWidth} strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round" style={{transition:'stroke-dashoffset 0.6s ease'}}/></svg>);}
+
+function BioCircle({state,onClick}){const cls=state==='scanning'?'scanning':state==='success'?'success':state==='error'?'error':'';const icon=state==='success'?'✓':state==='error'?'×':'👆';return(<div className={`bio-circle ${cls}`} onClick={onClick}><div className="bio-ripple"></div><div className="bio-ripple"></div><div className="bio-scan-line"></div><span className="bio-fingerprint">{icon}</span></div>);}
+
+function WaveEQ({playing}){return(<div className="wave-eq" style={{opacity:playing?1:0.3}}><div className="wave-bar" style={{animationPlayState:playing?'running':'paused'}}></div><div className="wave-bar" style={{animationPlayState:playing?'running':'paused'}}></div><div className="wave-bar" style={{animationPlayState:playing?'running':'paused'}}></div></div>);}
+
+function MarkdownText({text}){const lines=text.split('\n');const elements=[];let inList=false,listItems=[];const flushList=()=>{if(listItems.length){elements.push(<ul key={`ul-${elements.length}`}>{listItems}</ul>);listItems=[];inList=false;}};lines.forEach((line,i)=>{const trimmed=line.trim();if(!trimmed){flushList();elements.push(<p key={`p-${i}`}>&nbsp;</p>);return;}if(trimmed.startsWith('- ')||trimmed.startsWith('* ')){inList=true;listItems.push(<li key={`li-${i}`}>{parseInline(trimmed.slice(2))}</li>);}else{flushList();if(trimmed.startsWith('# '))elements.push(<h4 key={`h-${i}`} style={{marginBottom:8}}>{trimmed.slice(2)}</h4>);else if(trimmed.startsWith('## '))elements.push(<h5 key={`h-${i}`} style={{marginBottom:6}}>{trimmed.slice(3)}</h5>);else elements.push(<p key={`p-${i}`}>{parseInline(trimmed)}</p>);}});flushList();return<>{elements}</>;}
+
+function parseInline(text){const parts=[];let lastIdx=0;const regex=/(\*\*(.+?)\*\*|\*(.+?)\*)/g;let match;while((match=regex.exec(text))!==null){if(match.index>lastIdx)parts.push(<span key={lastIdx}>{text.slice(lastIdx,match.index)}</span>);if(match[2])parts.push(<strong key={match.index}>{match[2]}</strong>);else if(match[3])parts.push(<em key={match.index}>{match[3]}</em>);lastIdx=match.index+match[0].length;}if(lastIdx<text.length)parts.push(<span key={lastIdx}>{text.slice(lastIdx)}</span>);return parts.length?parts:text;}
+
+function ToggleSwitch({on,onChange}){return(<div className={`toggle-switch ${on?'on':''}`} onClick={()=>onChange(!on)}><div className="toggle-switch-knob"></div></div>);}
+
+
+    showToast('Timetable saved');
+  }, [wakeTime, sleepTime, slots, userId, onUpdateTimetable, showToast]);
+
+  const updateSlot = (id, field, value) => {
+    setSlots(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+  };
+
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const timelineStart = toMins(wakeTime);
+  const timelineEnd = toMins(sleepTime);
+  const timelineHeight = (timelineEnd - timelineStart) * PX_PER_MIN;
+
+  const categoryStats = useMemo(() => {
+    const stats = {};
+    slots.forEach(s => { stats[s.type] = (stats[s.type] || 0) + 60; });
+    return Object.entries(stats).map(([type, mins]) => ({ type, mins, label: TT_TYPES[type]?.label || type, color: TT_TYPES[type]?.color || '#5A5C6E' }));
+  }, [slots]);
+
+  if (showSetup) {
+    return (
+      <div className="tt-setup-sheet">
+        <h3>📅 Set Up Your Timetable</h3>
+        <p className="section-subtitle">Step 1: Set your daily schedule</p>
+        <div className="tt-time-row">
+          <div>
+            <label style={{fontSize:12,fontWeight:600,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'0.05em',display:'block',marginBottom:6}}>Wake Up</label>
+            <input type="time" value={wakeTime} onChange={e => setWakeTime(e.target.value)} />
+          </div>
+          <div>
+            <label style={{fontSize:12,fontWeight:600,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'0.05em',display:'block',marginBottom:6}}>Sleep</label>
+            <input type="time" value={sleepTime} onChange={e => setSleepTime(e.target.value)} />
+          </div>
+        </div>
+        <button className="btn btn-primary" onClick={generateSlots} style={{width:'100%'}}>Generate Hourly Slots</button>
+
+        {slots.length > 0 && (
+          <>
+            <p className="section-subtitle" style={{marginTop:20}}>Step 2: Customize your slots</p>
+            <div className="tt-grid">
+              {slots.map(slot => (
+                <React.Fragment key={slot.id}>
+                  <div className="tt-hour-label">{fmt12(slot.start)}</div>
+                  <div className="tt-slot">
+                    <input value={slot.activity} onChange={e => updateSlot(slot.id, 'activity', e.target.value)} placeholder="Activity..." />
+                    <select value={slot.type} onChange={e => updateSlot(slot.id, 'type', e.target.value)} style={{marginTop:4,fontSize:12}}>
+                      {Object.entries(TT_TYPES).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+                    </select>
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
+            <button className="btn btn-success" onClick={saveSlots} style={{width:'100%',marginTop:16}}>Save Timetable</button>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+        <h2 className="section-title">Timetable</h2>
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-secondary" style={{padding:'6px 12px',fontSize:12}} onClick={() => setActiveTab('timeline')}>Timeline</button>
+          <button className="btn btn-secondary" style={{padding:'6px 12px',fontSize:12}} onClick={() => setActiveTab('analysis')}>Analysis</button>
+        </div>
+      </div>
+
+      {activeTab === 'timeline' ? (
+        <div className="tt-timeline" style={{height: timelineHeight + 40}}>
+          <div className="tt-timeline-line"></div>
+          {nowMins >= timelineStart && nowMins <= timelineEnd && (
+            <>
+              <div className="tt-now-dot" style={{top: (nowMins - timelineStart) * PX_PER_MIN}}></div>
+              <div className="tt-now-line" style={{top: (nowMins - timelineStart) * PX_PER_MIN}}></div>
+            </>
+          )}
+          {slots.map(slot => {
+            const top = (toMins(slot.start) - timelineStart) * PX_PER_MIN;
+            const height = (toMins(slot.end) - toMins(slot.start)) * PX_PER_MIN;
+            const typeInfo = TT_TYPES[slot.type] || TT_TYPES.free;
+            return (
+              <div key={slot.id} className="tt-block" style={{
+                top, height: Math.max(height - 4, 20),
+                background: `${typeInfo.color}15`, borderLeftColor: typeInfo.color
+              }} onClick={() => setEditingSlot(slot)}>
+                <div className="tt-block-title">{slot.activity}</div>
+                <div className="tt-block-time">{fmt12(slot.start)} - {fmt12(slot.end)}</div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div>
+          <div className="section-subtitle">Time distribution by category</div>
+          {categoryStats.map(stat => (
+            <div key={stat.type} style={{marginBottom:14}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                <span style={{fontSize:13,fontWeight:500}}>{stat.label}</span>
+                <span style={{fontSize:12,color:'var(--muted)'}}>{Math.floor(stat.mins/60)}h {stat.mins%60}m</span>
+              </div>
+              <div className="tt-analysis-bar">
+                <div className="tt-analysis-fill" style={{
+                  width: `${Math.min((stat.mins / (timelineEnd - timelineStart)) * 100, 100)}%`,
+                  background: stat.color
+                }}></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button className="btn btn-secondary" onClick={() => setShowSetup(true)} style={{width:'100%',marginTop:16}}>✏️ Edit Timetable</button>
+
+      {editingSlot && (
+        <div className="modal-overlay" onClick={() => setEditingSlot(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Edit Slot</div>
+            <div className="auth-input-group">
+              <label>Activity</label>
+              <input value={editingSlot.activity} onChange={e => updateSlot(editingSlot.id, 'activity', e.target.value)} />
+            </div>
+            <div className="auth-input-group">
+              <label>Category</label>
+              <select value={editingSlot.type} onChange={e => updateSlot(editingSlot.id, 'type', e.target.value)}>
+                {Object.entries(TT_TYPES).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={() => setEditingSlot(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={() => { saveSlots(); setEditingSlot(null); }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE: FITNESS
+// ═══════════════════════════════════════════════════════════════
+
+function Fitness({ userId, fitnessData, onUpdateFitness, showToast }) {
+  const [activeEx, setActiveEx] = useState(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [dailyTarget, setDailyTarget] = useState(fitnessData.dailyTarget || 1800);
+  const timerRef = useRef(null);
+  const [showTargetModal, setShowTargetModal] = useState(false);
+
+  const exInfo = activeEx ? EXERCISE_OPTIONS.find(e => e.id === activeEx) : null;
+
+  useEffect(() => {
+    if (activeEx && !isPaused) {
+      timerRef.current = setInterval(() => setTimer(t => t + 1), 1000);
+    } else {
+      clearInterval(timerRef.current);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [activeEx, isPaused]);
+
+  const startExercise = (exId) => {
+    if (activeEx && timer > 5) {
+      // Auto-save current session
+      const prevEx = EXERCISE_OPTIONS.find(e => e.id === activeEx);
+      const newData = {
+        ...fitnessData,
+        totalSecs: (fitnessData.totalSecs || 0) + timer,
+        focusMins: (fitnessData.focusMins || 0) + Math.floor(timer / 60),
+        history: [...(fitnessData.history || []), { exercise: prevEx.name, secs: timer, date: new Date().toISOString() }]
+      };
+      onUpdateFitness(newData);
+      saveUser(userId, 'fitness', newData);
+    }
+    setActiveEx(exId);
+    setTimer(0);
+    setIsPaused(false);
+  };
+
+  const stopExercise = () => {
+    if (timer > 5 && exInfo) {
+      const newData = {
+        ...fitnessData,
+        totalSecs: (fitnessData.totalSecs || 0) + timer,
+        focusMins: (fitnessData.focusMins || 0) + Math.floor(timer / 60),
+        history: [...(fitnessData.history || []), { exercise: exInfo.name, secs: timer, date: new Date().toISOString() }]
+      };
+      onUpdateFitness(newData);
+      saveUser(userId, 'fitness', newData);
+      showToast(`Saved: ${exInfo.name} — ${formatDuration(timer)}`);
+    }
+    setActiveEx(null);
+    setTimer(0);
+    setIsPaused(false);
+  };
+
+  const progress = Math.min(((fitnessData.totalSecs || 0) + (activeEx ? timer : 0)) / dailyTarget * 100, 100);
+
+  const handleVoice = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      showToast('Voice not supported in this browser');
+      return;
+    }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = new SR();
+    rec.lang = 'en-US';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    rec.onresult = (e) => {
+      const text = e.results[0][0].transcript.toLowerCase();
+      if (text.includes('stop')) { stopExercise(); showToast('Stopped'); }
+      else if (text.includes('pause')) { setIsPaused(true); showToast('Paused'); }
+      else if (text.includes('resume') || text.includes('play')) { setIsPaused(false); showToast('Resumed'); }
+      else if (text.includes('summary')) { showToast(`Total: ${formatDuration(fitnessData.totalSecs || 0)}`); }
+      else {
+        const match = EXERCISE_OPTIONS.find(e => text.includes(e.name.toLowerCase()));
+        if (match) { startExercise(match.id); showToast(`Started: ${match.name}`); }
+      }
+    };
+    rec.start();
+    showToast('Listening...');
+  };
+
+  return (
+    <div>
+      <h2 className="section-title">Fitness Tracker</h2>
+
+      {activeEx && exInfo && (
+        <div className="ex-hero" style={{background: exInfo.colorLight, border: `1px solid ${exInfo.color}30`}}>
+          <div className="ex-hero-disc" style={{animationPlayState: isPaused ? 'paused' : 'running'}}>
+            <span className="ex-hero-letter">{exInfo.icon}</span>
+          </div>
+          <div style={{fontFamily:'Syne',fontWeight:700,fontSize:18,color:exInfo.color}}>{exInfo.name}</div>
+          <div className="ex-timer" style={{color:exInfo.color}}>{formatTime(timer)}</div>
+          <div className="ex-controls">
+            <button className="ex-control-btn" onClick={() => setIsPaused(!isPaused)}>{isPaused ? '▶️' : '⏸️'}</button>
+            <button className="ex-control-btn" onClick={stopExercise} style={{background:exInfo.color,color:'white'}}>⏹️</button>
+            <button className="ex-control-btn" onClick={handleVoice}>🎤</button>
+          </div>
+        </div>
+      )}
+
+      <div className="card" style={{padding:20,marginBottom:16,textAlign:'center'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:16,marginBottom:12}}>
+          <GoalRing size={100} progress={progress} strokeWidth={8} />
+          <div style={{textAlign:'left'}}>
+            <div style={{fontFamily:'Syne',fontWeight:700,fontSize:24}}>{formatDuration((fitnessData.totalSecs || 0) + (activeEx ? timer : 0))}</div>
+            <div style={{fontSize:13,color:'var(--text2)'}}>of {formatDuration(dailyTarget)} goal</div>
+            <div style={{fontSize:12,color:'var(--muted)',marginTop:4}}>{Math.round(progress)}% complete</div>
+          </div>
+        </div>
+        <button className="btn btn-ghost" style={{fontSize:12}} onClick={() => setShowTargetModal(true)}>⚙️ Adjust Goal</button>
+      </div>
+
+      <div className="ex-grid">
+        {EXERCISE_OPTIONS.map(ex => (
+          <div key={ex.id} className={`ex-item ${activeEx === ex.id ? 'active' : ''}`} onClick={() => startExercise(ex.id)}>
+            <div className="ex-item-icon">{ex.icon}</div>
+            <div className="ex-item-name">{ex.name}</div>
+          </div>
+        ))}
+      </div>
+
+      {showTargetModal && (
+        <div className="modal-overlay" onClick={() => setShowTargetModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Daily Exercise Goal</div>
+            <div className="auth-input-group">
+              <label>Target (minutes)</label>
+              <input type="number" value={Math.floor(dailyTarget/60)} onChange={e => setDailyTarget(parseInt(e.target.value||0)*60)} />
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={() => setShowTargetModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={() => {
+                const newData = { ...fitnessData, dailyTarget };
+                onUpdateFitness(newData);
+                saveUser(userId, 'fitness', newData);
+                setShowTargetModal(false);
+                showToast('Goal updated');
+              }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE: MUSIC PLAYER
+// ═══════════════════════════════════════════════════════════════
+
+function Music({ nowPlaying, isPlaying, onNowPlayingUpdate }) {
+  const [playlist, setPlaylist] = useState('focus');
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(180);
+  const [audioObj, setAudioObj] = useState(null);
+  const [uploadedSongs, setUploadedSongs] = useState(() => loadData('musicMeta', []));
+  const progressRef = useRef(null);
+  const animFrameRef = useRef(null);
+
+  const songs = [...DEMO_SONGS, ...uploadedSongs].filter(s => playlist === 'none' || s.playlist === playlist);
+  const currentSong = songs[currentIdx] || songs[0];
+
+  useEffect(() => {
+    if (currentSong) {
+      onNowPlayingUpdate(currentSong, isPlaying);
+    }
+  }, [currentSong, isPlaying, onNowPlayingUpdate]);
+
+  useEffect(() => {
+    if (isPlaying && audioObj) {
+      const update = () => {
+        setProgress(audioObj.currentTime);
+        animFrameRef.current = requestAnimationFrame(update);
+      };
+      animFrameRef.current = requestAnimationFrame(update);
+    } else {
+      cancelAnimationFrame(animFrameRef.current);
+    }
+    return () => cancelAnimationFrame(animFrameRef.current);
+  }, [isPlaying, audioObj]);
+
+  const togglePlay = () => {
+    if (!audioObj) return;
+    if (isPlaying) { audioObj.pause(); }
+    else { audioObj.play().catch(() => {}); }
+    onNowPlayingUpdate(currentSong, !isPlaying);
+  };
+
+  const nextTrack = () => { setCurrentIdx(i => (i + 1) % songs.length); setProgress(0); };
+  const prevTrack = () => { setCurrentIdx(i => (i - 1 + songs.length) % songs.length); setProgress(0); };
+
+  const handleSeek = (e) => {
+    if (!progressRef.current || !audioObj) return;
+    const rect = progressRef.current.getBoundingClientRect();
+    const clientX = e.touches?.[0]?.clientX ?? e.clientX;
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    audioObj.currentTime = pct * duration;
+    setProgress(pct * duration);
+  };
+
+  const handleFileUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const newSongs = files.map(f => ({
+      id: genId(), name: f.name.replace(/\.[^/.]+$/, ''), artist: 'Local File', playlist: 'none',
+      fileName: f.name, url: URL.createObjectURL(f)
+    }));
+    const updated = [...uploadedSongs, ...newSongs];
+    setUploadedSongs(updated);
+    saveData('musicMeta', updated.map(s => ({ id: s.id, name: s.name, artist: s.artist, playlist: s.playlist, fileName: s.fileName })));
+    showToast(`Added ${files.length} song(s)`);
+  };
+
+  const handleVoice = () => {
+    if (!('webkitSpeechRecognition' in window)) { showToast('Voice not supported'); return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = new SR();
+    rec.lang = 'en-US';
+    rec.onresult = (e) => {
+      const text = e.results[0][0].transcript.toLowerCase();
+      if (text.includes('play') || text.includes('resume')) togglePlay();
+      else if (text.includes('pause')) { if (isPlaying) togglePlay(); }
+      else if (text.includes('next')) nextTrack();
+      else if (text.includes('previous') || text.includes('back')) prevTrack();
+      else if (text.includes('focus')) setPlaylist('focus');
+      else if (text.includes('workout') || text.includes('gym')) setPlaylist('workout');
+      else if (text.includes('relax') || text.includes('chill')) setPlaylist('relax');
+    };
+    rec.start();
+  };
+
+  useEffect(() => {
+    if (currentSong?.url) {
+      const a = new Audio(currentSong.url);
+      a.onloadedmetadata = () => setDuration(a.duration || 180);
+      a.onended = nextTrack;
+      setAudioObj(a);
+      if (isPlaying) a.play().catch(() => {});
+      return () => { a.pause(); a.src = ''; };
+    }
+  }, [currentSong?.id]);
+
+  return (
+    <div>
+      <h2 className="section-title">Music</h2>
+
+      <div className="music-player">
+        <div className={`music-vinyl ${!isPlaying ? 'paused' : ''}`}>
+          <div className="music-vinyl-label">{currentSong?.name?.slice(0,2)?.toUpperCase() || '♪'}</div>
+        </div>
+
+        <WaveEQ playing={isPlaying} />
+
+        <div className="music-track-name">{currentSong?.name || 'No Track'}</div>
+        <div className="music-track-artist">{currentSong?.artist || 'Select a playlist'}</div>
+
+        <div className="music-seek">
+          <span className="music-seek-time">{formatTime(Math.floor(progress))}</span>
+          <div className="music-seek-track" ref={progressRef} onClick={handleSeek} style={{touchAction:'none'}}>
+            <div className="music-seek-fill" style={{width: `${(progress/duration)*100}%`}}>
+              <div className="music-seek-thumb"></div>
+            </div>
+          </div>
+          <span className="music-seek-time">{formatTime(Math.floor(duration))}</span>
+        </div>
+
+        <div className="music-controls">
+          <button className="music-btn" onClick={prevTrack}>⏮</button>
+          <button className="music-btn play" onClick={togglePlay}>{isPlaying ? '⏸' : '▶'}</button>
+          <button className="music-btn" onClick={nextTrack}>⏭</button>
+          <button className="music-btn" onClick={handleVoice}>🎤</button>
+        </div>
+
+        <div className="music-playlist-tabs">
+          {['focus','workout','relax','none'].map(pl => (
+            <button key={pl} className={`music-pl-tab ${playlist === pl ? 'active' : ''}`} onClick={() => { setPlaylist(pl); setCurrentIdx(0); }}>
+              {pl === 'focus' ? '📚 Focus' : pl === 'workout' ? '💪 Workout' : pl === 'relax' ? '🌙 Relax' : '📁 All'}
+            </button>
+          ))}
+        </div>
+
+        <div style={{marginTop:20}}>
+          <label className="btn btn-secondary" style={{width:'100%',cursor:'pointer',display:'flex',gap:8}}>
+            📁 Upload Songs
+            <input type="file" accept="audio/*" multiple style={{display:'none'}} onChange={handleFileUpload} />
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE: AI ASSISTANT (Gemini)
+// ═══════════════════════════════════════════════════════════════
+
+function AIAssistant({ userId, profile, timetableData, fitnessData, aiKey, onUpdateAIKey, showToast }) {
+  const [activeTab, setActiveTab] = useState('briefing');
+  const [messages, setMessages] = useState(() => {
+    const saved = loadUser(userId, 'aiChat', []);
+    return saved.length ? saved : [{ role: 'model', text: `Hello ${profile.name || 'there'}! I'm your ProHub AI assistant. How can I help you today?`, isLocal: true }];
+  });
+  const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [newsItems, setNewsItems] = useState(() => loadUser(userId, 'aiNews', { date: '', items: [] }).items);
+  const [notifSummaries, setNotifSummaries] = useState(() => loadData('notifSummaries', []));
+  const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
+    if (window.__aiPrefill) {
+      setInputText(window.__aiPrefill);
+      window.__aiPrefill = null;
+      setActiveTab('chat');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'briefing') {
+      const cached = loadUser(userId, 'aiNews', { date: '', items: [] });
+      const today = new Date().toDateString();
+      if (cached.date === today && cached.items.length) {
+        setNewsItems(cached.items);
+      } else if (aiKey) {
+        fetchBriefing();
+      }
+    }
+  }, [activeTab, aiKey, userId]);
+
+  const fetchBriefing = async () => {
+    if (!aiKey) { showToast('Add Gemini API key in Settings'); return; }
+    setIsLoading(true);
+    try {
+      const prompt = `Generate 6 productivity and tech news briefs as a JSON array. Each item: {category, title, summary, readTime, url}. Categories: Tech, Productivity, Health, Business, Science. Return ONLY valid JSON array.`;
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${aiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+      const data = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+      const match = text.match(/\[[\s\S]*\]/);
+      const items = match ? JSON.parse(match[0]) : [];
+      setNewsItems(items);
+      saveUser(userId, 'aiNews', { date: new Date().toDateString(), items });
+    } catch (e) {
+      showToast('Failed to load briefing');
+    }
+    setIsLoading(false);
+  };
+
+  const sendMessage = async () => {
+    if (!inputText.trim() || !aiKey) return;
+    const userMsg = { role: 'user', text: inputText.trim() };
+    const newMessages = [...messages.filter(m => !m.isLocal), userMsg];
+    setMessages(newMessages);
+    setInputText('');
+    setIsLoading(true);
+
+    try {
+      const systemPrompt = `You are ProHub AI, a productivity assistant. User: ${profile.name || 'User'}. Today's schedule: ${JSON.stringify(timetableData.slots?.slice(0,3) || [])}. Exercise today: ${formatDuration(fitnessData.totalSecs || 0)}. Help with tasks, scheduling, fitness, and productivity.`;
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${aiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [
+          { role: 'user', parts: [{ text: systemPrompt }] },
+          ...newMessages.map(m => ({ role: m.role, parts: [{ text: m.text }] }))
+        ]})
+      });
+      const data = await res.json();
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not process that.';
+      const updated = [...newMessages, { role: 'model', text: reply }];
+      setMessages(updated);
+      saveUser(userId, 'aiChat', updated);
+    } catch (e) {
+      showToast('AI request failed');
+    }
+    setIsLoading(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  };
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 110) + 'px';
+    }
+  }, [inputText]);
+
+  const summarizeNotifications = async () => {
+    const raw = notifSummaries.filter(n => !n.archived && !n.read).slice(0, 10);
+    if (!raw.length) { showToast('No unread notifications'); return; }
+    if (!aiKey) { showToast('Add Gemini API key in Settings'); return; }
+
+    const messagesText = raw.map(n => `${n.sender}: ${n.rawMessages?.join(' ')}`).join('\n');
+    const prompt = `Summarize these messages into 2-3 lines. List sender(s). Suggest: reply / ignore / urgent. Messages: ${messagesText}`;
+
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${aiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+      const data = await res.json();
+      const summary = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Could not summarize.';
+
+      const newSummary = {
+        id: genId(), appName: 'Summary', sender: 'AI',
+        summary, suggestedAction: 'review', timestamp: Date.now(), read: false, archived: false
+      };
+      const updated = [newSummary, ...notifSummaries];
+      setNotifSummaries(updated);
+      saveData('notifSummaries', updated);
+      showToast('Notifications summarized');
+    } catch (e) {
+      showToast('Summarization failed');
+    }
+  };
+
+  const addDemoNotifs = () => {
+    const demos = [
+      { id: genId(), appName: 'WhatsApp', appPackage: 'com.whatsapp', sender: 'Team Lead', rawMessages: ['Meeting moved to 3pm', 'Please review the PR'], summary: '', suggestedAction: 'reply', timestamp: Date.now() - 300000, read: false, archived: false },
+      { id: genId(), appName: 'Gmail', appPackage: 'com.google.android.gm', sender: 'HR', rawMessages: ['Your leave request has been approved', 'Please confirm your attendance'], summary: '', suggestedAction: 'ignore', timestamp: Date.now() - 600000, read: false, archived: false },
+    ];
+    const updated = [...demos, ...notifSummaries];
+    setNotifSummaries(updated);
+    saveData('notifSummaries', updated);
+    showToast('Demo notifications added');
+  };
+
+  return (
+    <div>
+      <h2 className="section-title">AI Assistant</h2>
+
+      <div className="ai-tabs">
+        <button className={`ai-tab ${activeTab === 'briefing' ? 'active' : ''}`} onClick={() => setActiveTab('briefing')}>📰 Briefing</button>
+        <button className={`ai-tab ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>💬 Chat</button>
+        <button className={`ai-tab ${activeTab === 'summaries' ? 'active' : ''}`} onClick={() => setActiveTab('summaries')}>📋 Summaries</button>
+      </div>
+
+      {activeTab === 'briefing' && (
+        <div>
+          {!aiKey && <div className="empty-state"><div className="empty-state-icon">🔑</div><div className="empty-state-text">Add your Gemini API key in Settings to get daily briefings</div></div>}
+          {isLoading && <div style={{textAlign:'center',padding:40,color:'var(--muted)'}}><div className="ai-typing"><div className="ai-typing-dot"></div><div className="ai-typing-dot"></div><div className="ai-typing-dot"></div></div></div>}
+          {newsItems.map((item, i) => (
+            <div key={i} className="ai-news-card">
+              <span className="ai-news-badge" style={{background:`${item.color || '#6366F1'}20`,color:item.color || '#6366F1'}}>{item.category}</span>
+              <div className="ai-news-title">{item.title}</div>
+              <div className="ai-news-summary">{item.summary}</div>
+              <div className="ai-news-meta">
+                <span>⏱ {item.readTime}</span>
+                {item.url && <span className="ai-news-link" onClick={() => window.open(item.url, '_blank')}>↗ Read</span>}
+                <span className="ai-news-link" onClick={() => { setActiveTab('chat'); setInputText(`Tell me more about: ${item.title}`); }}>Ask AI →</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeTab === 'chat' && (
+        <div className="ai-chat-container">
+          <div className="ai-messages">
+            {messages.map((msg, i) => (
+              <div key={i} className={`ai-message ${msg.role}`}>
+                <div className={`ai-avatar ${msg.role}`}>{msg.role === 'model' ? '🤖' : '👤'}</div>
+                <div className={`ai-bubble ${msg.role}`}>
+                  <MarkdownText text={msg.text} />
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="ai-message">
+                <div className="ai-avatar bot">🤖</div>
+                <div className="ai-bubble bot">
+                  <div className="ai-typing"><div className="ai-typing-dot"></div><div className="ai-typing-dot"></div><div className="ai-typing-dot"></div></div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef}></div>
+          </div>
+          <div className="ai-input-area">
+            <textarea ref={textareaRef} value={inputText} onChange={e => setInputText(e.target.value)} onKeyDown={handleKeyDown} placeholder="Ask ProHub AI..." rows={1} />
+            <button className="ai-send-btn" onClick={sendMessage}>➤</button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'summaries' && (
+        <div>
+          <div style={{display:'flex',gap:8,marginBottom:16}}>
+            <button className="btn btn-primary" style={{flex:1,fontSize:13}} onClick={summarizeNotifications}>📝 Summarize Unread</button>
+            <button className="btn btn-secondary" style={{fontSize:13}} onClick={addDemoNotifs}>Demo</button>
+          </div>
+          {notifSummaries.filter(n => n.summary).length === 0 && (
+            <div className="empty-state"><div className="empty-state-icon">📭</div><div className="empty-state-text">No summaries yet. Summarize your notifications to see them here.</div></div>
+          )}
+          {notifSummaries.filter(n => n.summary).map(n => (
+            <div key={n.id} className="notif-card" style={{borderLeftColor: '#6366F1'}}>
+              <div className="notif-card-header">
+                <span className="notif-app-emoji">🤖</span>
+                <span className="notif-app-name">AI Summary</span>
+                <span className="notif-sender">{new Date(n.timestamp).toLocaleDateString()}</span>
+              </div>
+              <div className="notif-summary">{n.summary}</div>
+              <div className="notif-actions">
+                <button className="notif-action-btn" onClick={() => { const u = notifSummaries.map(x => x.id === n.id ? {...x, read: true} : x); setNotifSummaries(u); saveData('notifSummaries', u); }}>Mark Read</button>
+                <button className="notif-action-btn" onClick={() => { const u = notifSummaries.map(x => x.id === n.id ? {...x, archived: true} : x); setNotifSummaries(u); saveData('notifSummaries', u); }}>Archive</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE: TASKS & REMINDERS
+// ═══════════════════════════════════════════════════════════════
+
+function Tasks({ userId, todos, onUpdateTodos, showToast }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newDate, setNewDate] = useState('');
+  const [newTime, setNewTime] = useState('');
+  const [newRecurring, setNewRecurring] = useState(false);
+  const [newRule, setNewRule] = useState('none');
+  const [editingTodo, setEditingTodo] = useState(null);
+  const reminderTimeoutsRef = useRef([]);
+
+  useEffect(() => {
+    // Reschedule reminders on load
+    reminderTimeoutsRef.current.forEach(clearTimeout);
+    reminderTimeoutsRef.current = [];
+
+    todos.forEach(todo => {
+      if (todo.completed || todo.snoozedUntil > Date.now()) return;
+      const due = new Date(todo.dueDate + 'T' + (todo.dueTime || '00:00'));
+      const msUntil = due.getTime() - Date.now();
+      if (msUntil > 0 && msUntil < 7 * 24 * 60 * 60 * 1000) {
+        const t = setTimeout(() => {
+          if (Notification.permission === 'granted') {
+            new Notification('ProHub Task', { body: todo.title, icon: '✅' });
+          }
+        }, msUntil);
+        reminderTimeoutsRef.current.push(t);
+      }
+    });
+    return () => reminderTimeoutsRef.current.forEach(clearTimeout);
+  }, [todos]);
+
+  const addTodo = () => {
+    if (!newTitle.trim()) return;
+    const todo = {
+      id: genId(), title: newTitle.trim(),
+      dueDate: newDate || new Date().toISOString().split('T')[0],
+      dueTime: newTime || null,
+      completed: false, recurring: newRecurring,
+      recurrenceRule: newRule, snoozedUntil: 0,
+      createdAt: Date.now(), source: 'manual'
+    };
+    const updated = [todo, ...todos];
+    onUpdateTodos(updated);
+    saveUser(userId, 'todos', updated);
+    setShowAdd(false);
+    setNewTitle(''); setNewDate(''); setNewTime(''); setNewRecurring(false); setNewRule('none');
+    showToast('Task added');
+  };
+
+  const toggleComplete = (id) => {
+    const updated = todos.map(t => {
+      if (t.id !== id) return t;
+      const completed = !t.completed;
+      if (completed && t.recurring) {
+        // Generate next instance
+        const nextDate = new Date(t.dueDate);
+        if (t.recurrenceRule === 'daily') nextDate.setDate(nextDate.getDate() + 1);
+        else if (t.recurrenceRule === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
+        const nextTodo = { ...t, id: genId(), completed: false, dueDate: nextDate.toISOString().split('T')[0], createdAt: Date.now() };
+        return [t, nextTodo];
+      }
+      return { ...t, completed };
+    }).flat();
+    onUpdateTodos(updated);
+    saveUser(userId, 'todos', updated);
+  };
+
+  const deleteTodo = (id) => {
+    const updated = todos.filter(t => t.id !== id);
+    onUpdateTodos(updated);
+    saveUser(userId, 'todos', updated);
+    showToast('Task deleted');
+  };
+
+  const snoozeTodo = (id, minutes) => {
+    const updated = todos.map(t => t.id === id ? { ...t, snoozedUntil: Date.now() + minutes * 60000 } : t);
+    onUpdateTodos(updated);
+    saveUser(userId, 'todos', updated);
+    showToast(`Snoozed for ${minutes}m`);
+  };
+
+  const handleVoiceAdd = () => {
+    if (!('webkitSpeechRecognition' in window)) { showToast('Voice not supported'); return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const rec = new SR();
+    rec.lang = 'en-US';
+    rec.onresult = async (e) => {
+      const text = e.results[0][0].transcript;
+      showToast('Processing...');
+      // Simple heuristic parsing (no API key needed for basic extraction)
+      const title = text;
+      let dueDate = new Date().toISOString().split('T')[0];
+      let dueTime = null;
+      const timeMatch = text.match(/(\d{1,2}):(\d{2})\s*(am|pm)?/i);
+      if (timeMatch) {
+        let h = parseInt(timeMatch[1]), m = parseInt(timeMatch[2]);
+        if (timeMatch[3]?.toLowerCase() === 'pm' && h < 12) h += 12;
+        dueTime = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      }
+      const recurring = /daily|every day|weekly|every week/i.test(text);
+      const rule = /weekly|every week/i.test(text) ? 'weekly' : recurring ? 'daily' : 'none';
+
+      const todo = {
+        id: genId(), title, dueDate, dueTime,
+        completed: false, recurring, recurrenceRule: rule,
+        snoozedUntil: 0, createdAt: Date.now(), source: 'voice'
+      };
+      const updated = [todo, ...todos];
+      onUpdateTodos(updated);
+      saveUser(userId, 'todos', updated);
+      showToast('Task added by voice');
+    };
+    rec.start();
+  };
+
+  const today = new Date().toISOString().split('T')[0];
+  const todayTodos = todos.filter(t => t.dueDate === today && !t.completed);
+  const upcomingTodos = todos.filter(t => t.dueDate > today && !t.completed);
+  const completedTodos = todos.filter(t => t.completed);
+
+  const renderSection = (title, items, count) => (
+    <div className="task-section">
+      <div className="task-section-header">
+        <span className="task-section-title">{title}</span>
+        <span className="task-count">{count}</span>
+      </div>
+      {items.length === 0 && <div style={{fontSize:13,color:'var(--muted)',padding:'8px 0'}}>No tasks</div>}
+      {items.map(todo => (
+        <div key={todo.id} className={`task-item ${todo.completed ? 'completed' : ''}`}>
+          <div className={`task-checkbox ${todo.completed ? 'checked' : ''}`} onClick={() => toggleComplete(todo.id)}>
+            {todo.completed && '✓'}
+          </div>
+          <div className="task-content" onClick={() => setEditingTodo(todo)}>
+            <div className="task-title">{todo.title}</div>
+            <div className="task-meta">
+              {todo.dueTime && `⏰ ${fmt12(todo.dueTime)} `}
+              {todo.recurring && `🔄 ${todo.recurrenceRule} `}
+              {todo.source === 'voice' && '🎤'}
+            </div>
+          </div>
+          <div className="task-actions">
+            {!todo.completed && <button className="task-action-btn" onClick={() => snoozeTodo(todo.id, 15)} title="Snooze 15m">🔔</button>}
+            <button className="task-action-btn" onClick={() => deleteTodo(todo.id)} title="Delete">🗑</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div>
+      <h2 className="section-title">Tasks</h2>
+      {renderSection('Today', todayTodos, todayTodos.length)}
+      {renderSection('Upcoming', upcomingTodos, upcomingTodos.length)}
+      {renderSection('Completed', completedTodos, completedTodos.length)}
+
+      <button className="task-fab" onClick={() => setShowAdd(true)}>+</button>
+
+      {showAdd && (
+        <div className="task-modal-overlay" onClick={() => setShowAdd(false)}>
+          <div className="task-modal" onClick={e => e.stopPropagation()}>
+            <h3 style={{marginBottom:16,fontFamily:'Syne',fontWeight:700}}>New Task</h3>
+            <div className="auth-input-group">
+              <label>Title</label>
+              <input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="What needs to be done?" />
+            </div>
+            <div style={{display:'flex',gap:12}}>
+              <div className="auth-input-group" style={{flex:1}}>
+                <label>Due Date</label>
+                <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} />
+              </div>
+              <div className="auth-input-group" style={{flex:1}}>
+                <label>Time</label>
+                <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} />
+              </div>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16}}>
+              <ToggleSwitch on={newRecurring} onChange={setNewRecurring} />
+              <span style={{fontSize:13,color:'var(--text2)'}}>Recurring</span>
+              {newRecurring && (
+                <select value={newRule} onChange={e => setNewRule(e.target.value)} style={{width:120}}>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                </select>
+              )}
+            </div>
+            <div style={{display:'flex',gap:10}}>
+              <button className="btn btn-secondary" style={{flex:1}} onClick={() => setShowAdd(false)}>Cancel</button>
+              <button className="btn btn-primary" style={{flex:1}} onClick={addTodo}>Add Task</button>
+              <button className="btn btn-secondary" onClick={handleVoiceAdd}>🎤</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingTodo && (
+        <div className="modal-overlay" onClick={() => setEditingTodo(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Edit Task</div>
+            <div className="auth-input-group">
+              <label>Title</label>
+              <input value={editingTodo.title} onChange={e => setEditingTodo({...editingTodo, title: e.target.value})} />
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={() => setEditingTodo(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={() => {
+                const updated = todos.map(t => t.id === editingTodo.id ? editingTodo : t);
+                onUpdateTodos(updated);
+                saveUser(userId, 'todos', updated);
+                setEditingTodo(null);
+                showToast('Task updated');
+              }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE: NOTIFICATIONS CENTER
+// ═══════════════════════════════════════════════════════════════
+
+function Notifications({ notifSummaries, onUpdateNotifSummaries }) {
+  const [filter, setFilter] = useState('all');
+  const [appFilter, setAppFilter] = useState('all');
+
+  useEffect(() => {
+    // Auto-delete entries older than 7 days
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const cleaned = notifSummaries.filter(n => n.timestamp > cutoff);
+    if (cleaned.length !== notifSummaries.length) {
+      onUpdateNotifSummaries(cleaned);
+      saveData('notifSummaries', cleaned);
+    }
+  }, []);
+
+  const apps = [...new Set(notifSummaries.map(n => n.appName))];
+
+  let filtered = notifSummaries;
+  if (filter === 'unread') filtered = filtered.filter(n => !n.read && !n.archived);
+  if (filter === 'archived') filtered = filtered.filter(n => n.archived);
+  if (appFilter !== 'all') filtered = filtered.filter(n => n.appName === appFilter);
+
+  const appColors = { WhatsApp: '#25D366', Gmail: '#EA4335', Telegram: '#0088CC', Instagram: '#E4405F' };
+
+  return (
+    <div>
+      <h2 className="section-title">Notifications</h2>
+
+      <div className="notif-filter-tabs">
+        {['all','unread','archived'].map(f => (
+          <button key={f} className={`notif-filter-tab ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
+            {f === 'all' ? 'All' : f === 'unread' ? 'Unread' : 'Archived'}
+          </button>
+        ))}
+      </div>
+
+      <div className="notif-app-chips">
+        <button className={`notif-app-chip ${appFilter === 'all' ? 'active' : ''}`} onClick={() => setAppFilter('all')}>All Apps</button>
+        {apps.map(app => (
+          <button key={app} className={`notif-app-chip ${appFilter === app ? 'active' : ''}`} onClick={() => setAppFilter(app)}>{app}</button>
+        ))}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="empty-state"><div className="empty-state-icon">📭</div><div className="empty-state-text">No notifications to display</div></div>
+      )}
+
+      {filtered.map(n => (
+        <div key={n.id} className="notif-card" style={{borderLeftColor: appColors[n.appName] || '#6366F1', opacity: n.read ? 0.6 : 1}}>
+          <div className="notif-card-header">
+            <span className="notif-app-emoji">{n.appName === 'WhatsApp' ? '💬' : n.appName === 'Gmail' ? '📧' : n.appName === 'Telegram' ? '✈️' : n.appName === 'Instagram' ? '📸' : '🔔'}</span>
+            <span className="notif-app-name">{n.appName}</span>
+            <span className="notif-sender">{n.sender}</span>
+          </div>
+          <div className="notif-summary">{n.summary || n.rawMessages?.join(' ') || 'No content'}</div>
+          <div style={{fontSize:11,color:'var(--muted)',marginBottom:8}}>Suggested: <span style={{color:'var(--indigo)',fontWeight:600}}>{n.suggestedAction || 'review'}</span></div>
+          <div className="notif-actions">
+            <button className="notif-action-btn" onClick={() => { const u = notifSummaries.map(x => x.id === n.id ? {...x, read: true} : x); onUpdateNotifSummaries(u); saveData('notifSummaries', u); }}>Mark Read</button>
+            <button className="notif-action-btn" onClick={() => { const u = notifSummaries.map(x => x.id === n.id ? {...x, archived: true} : x); onUpdateNotifSummaries(u); saveData('notifSummaries', u); }}>Archive</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE: SETTINGS
+// ═══════════════════════════════════════════════════════════════
+
+function Settings({ userId, profile, onUpdateProfile, aiKey, onUpdateAIKey, onLogout, showToast }) {
+  const [openSections, setOpenSections] = useState(new Set());
+  const [name, setName] = useState(profile.name || '');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [animIntensity, setAnimIntensity] = useState(() => loadData('animIntensity', 'full'));
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearStep, setClearStep] = useState(0);
+
+  const toggleSection = (id) => {
+    const next = new Set(openSections);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setOpenSections(next);
+  };
+
+  const saveProfile = () => {
+    const updated = { ...profile, name };
+    onUpdateProfile(updated);
+    const users = loadData('users', []);
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx >= 0) { users[idx].name = name; saveData('users', users); }
+    showToast('Profile saved');
+  };
+
+  const changePassword = () => {
+    if (newPassword !== confirmPassword) { showToast('Passwords do not match'); return; }
+    if (newPassword.length < 6) { showToast('Password must be 6+ chars'); return; }
+    const users = loadData('users', []);
+    const idx = users.findIndex(u => u.id === userId);
+    if (idx >= 0) { users[idx].passwordHash = hashPwd(newPassword); saveData('users', users); }
+    setNewPassword(''); setConfirmPassword('');
+    showToast('Password changed');
+  };
+
+  const handleClearAll = () => {
+    if (clearStep === 0) { setClearStep(1); setTimeout(() => setClearStep(0), 1500); }
+    else {
+      // Clear all per-user data
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('ph_u_' + userId));
+      keys.forEach(k => localStorage.removeItem(k));
+      onLogout();
+      showToast('All data cleared');
+    }
+  };
+
+  const exportData = () => {
+    const data = {};
+    Object.keys(localStorage).filter(k => k.startsWith('ph_u_' + userId)).forEach(k => {
+      try { data[k] = JSON.parse(localStorage.getItem(k)); } catch(e) {}
+    });
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `prohub_export_${userId}.json`; a.click();
+    URL.revokeObjectURL(url);
+    showToast('Data exported');
+  };
+
+  const stats = {
+    tasks: (loadUser(userId, 'todos', []).length),
+    exercise: formatDuration(loadUser(userId, 'fitness', {}).totalSecs || 0),
+    timetableSlots: (loadUser(userId, 'timetable', {}).slots || []).length,
+    aiMessages: (loadUser(userId, 'aiChat', []).length),
+  };
+
+  const Section = ({ id, title, children }) => (
+    <div className={`settings-section ${openSections.has(id) ? 'open' : ''}`}>
+      <div className="settings-section-header" onClick={() => toggleSection(id)}>
+        <span className="settings-section-title">{title}</span>
+        <span className="settings-section-chevron">▼</span>
+      </div>
+      <div className="settings-section-body">{children}</div>
+    </div>
+  );
+
+  return (
+    <div>
+      <h2 className="section-title">Settings</h2>
+
+      <Section id="profile" title="👤 Profile">
+        <div className="auth-input-group">
+          <label>Name</label>
+          <input value={name} onChange={e => setName(e.target.value)} />
+        </div>
+        <div className="auth-input-group">
+          <label>Email</label>
+          <input value={profile.email || ''} readOnly style={{opacity:0.6}} />
+        </div>
+        <button className="btn btn-primary" style={{width:'100%',marginTop:8}} onClick={saveProfile}>Save Profile</button>
+      </Section>
+
+      <Section id="password" title="🔐 Change Password">
+        <div className="auth-input-group">
+          <label>New Password</label>
+          <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min 6 characters" />
+        </div>
+        <div className="auth-input-group">
+          <label>Confirm Password</label>
+          <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+        </div>
+        <button className="btn btn-primary" style={{width:'100%',marginTop:8}} onClick={changePassword}>Update Password</button>
+      </Section>
+
+      <Section id="timetable" title="📅 Timetable">
+        <div className="settings-row">
+          <div><div className="settings-label">Wake Time</div></div>
+          <div className="settings-value">{loadUser(userId, 'timetable', {}).wakeTime || 'Not set'}</div>
+        </div>
+        <div className="settings-row">
+          <div><div className="settings-label">Sleep Time</div></div>
+          <div className="settings-value">{loadUser(userId, 'timetable', {}).sleepTime || 'Not set'}</div>
+        </div>
+        <button className="btn btn-secondary" style={{width:'100%',marginTop:8}} onClick={() => showToast('Go to Timetable tab to edit')}>Edit in Timetable</button>
+      </Section>
+
+      <Section id="fitness" title="💪 Fitness">
+        <div className="settings-row">
+          <div><div className="settings-label">Daily Target</div></div>
+          <div className="settings-value">{formatDuration(loadUser(userId, 'fitness', {}).dailyTarget || 1800)}</div>
+        </div>
+        <div className="settings-row">
+          <div><div className="settings-label">Total Exercise</div></div>
+          <div className="settings-value">{stats.exercise}</div>
+        </div>
+      </Section>
+
+      <Section id="ai" title="🤖 AI Key">
+        <div className="auth-input-group">
+          <label>Gemini API Key</label>
+          <input value={aiKey} onChange={e => onUpdateAIKey(e.target.value)} placeholder="AIzaSy..." />
+        </div>
+        <div style={{fontSize:12,color:'var(--muted)',marginTop:4}}>Get your key at <a href="https://aistudio.google.com/app/apikey" target="_blank" style={{color:'var(--indigo)'}}>Google AI Studio</a></div>
+        {aiKey && <div style={{fontSize:12,color:'var(--green)',marginTop:8}}>✓ Key configured</div>}
+      </Section>
+
+      <Section id="floating" title="📱 Floating Assistant">
+        <div className="settings-row">
+          <div><div className="settings-label">Animation Intensity</div><div className="settings-desc">Control motion effects</div></div>
+          <select value={animIntensity} onChange={e => { setAnimIntensity(e.target.value); saveData('animIntensity', e.target.value); showToast('Saved'); }} style={{width:100}}>
+            <option value="full">Full</option>
+            <option value="reduced">Reduced</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+        <div className="settings-row">
+          <div><div className="settings-label">Privacy Mode</div><div className="settings-desc">Process data on-device</div></div>
+          <ToggleSwitch on={true} onChange={() => {}} />
+        </div>
+      </Section>
+
+      <Section id="stats" title="📊 Memory & Stats">
+        <div className="settings-row">
+          <div><div className="settings-label">Tasks Created</div></div>
+          <div className="settings-value">{stats.tasks}</div>
+        </div>
+        <div className="settings-row">
+          <div><div className="settings-label">Timetable Slots</div></div>
+          <div className="settings-value">{stats.timetableSlots}</div>
+        </div>
+        <div className="settings-row">
+          <div><div className="settings-label">AI Messages</div></div>
+          <div className="settings-value">{stats.aiMessages}</div>
+        </div>
+        <div className="settings-row">
+          <div><div className="settings-label">Storage Used</div></div>
+          <div className="settings-value">{(JSON.stringify(localStorage).length / 1024).toFixed(1)} KB</div>
+        </div>
+      </Section>
+
+      <Section id="data" title="💾 Data Management">
+        <button className="btn btn-secondary" style={{width:'100%',marginBottom:8}} onClick={exportData}>📤 Export Data (JSON)</button>
+        <button className="btn btn-danger" style={{width:'100%'}} onClick={() => setShowClearConfirm(true)}>
+          {clearStep === 0 ? '🗑 Clear All Data' : '⚠️ Tap again to confirm'}
+        </button>
+      </Section>
+
+      <Section id="info" title="ℹ️ App Info">
+        <div style={{fontSize:13,color:'var(--text2)',lineHeight:1.6}}>
+          <p><strong>ProHub</strong> v1.0.0</p>
+          <p style={{marginTop:8}}>Built with React 18, WebAuthn, Web Speech API, and Gemini AI.</p>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:12}}>
+            <span style={{padding:'4px 10px',background:'var(--card2)',borderRadius:6,fontSize:11}}>React 18</span>
+            <span style={{padding:'4px 10px',background:'var(--card2)',borderRadius:6,fontSize:11}}>PWA</span>
+            <span style={{padding:'4px 10px',background:'var(--card2)',borderRadius:6,fontSize:11}}>WebAuthn</span>
+            <span style={{padding:'4px 10px',background:'var(--card2)',borderRadius:6,fontSize:11}}>Gemini AI</span>
+          </div>
+          <p style={{marginTop:12,color:'var(--muted)'}}>Install: Chrome menu → Add to Home Screen</p>
+        </div>
+        <button className="btn btn-danger" style={{width:'100%',marginTop:16}} onClick={onLogout}>🚪 Logout</button>
+      </Section>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AUTH COMPONENTS
+// ═══════════════════════════════════════════════════════════════
+
+function AuthScreen({ onLogin }) {
+  const [tab, setTab] = useState('login');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [signupName, setSignupName] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [bioState, setBioState] = useState('idle');
+  const [showBioSetup, setShowBioSetup] = useState(false);
+  const [pendingUser, setPendingUser] = useState(null);
+  const [bioEmail, setBioEmail] = useState('');
+
+  const handleSignup = () => {
+    if (!signupName.trim() || !signupEmail.trim() || !signupPassword.trim()) {
+      alert('Please fill all fields'); return;
+    }
+    if (signupPassword.length < 6) { alert('Password must be 6+ characters'); return; }
+    const users = loadData('users', []);
+    if (users.some(u => u.email === signupEmail.trim())) { alert('Email already registered'); return; }
+
+    const user = { id: genId(), name: signupName.trim(), email: signupEmail.trim(), passwordHash: hashPwd(signupPassword), bioCred: null, bioRegDate: null };
+    users.push(user);
+    saveData('users', users);
+    setPendingUser(user);
+    setShowBioSetup(true);
+  };
+
+  const handleLogin = () => {
+    const users = loadData('users', []);
+    const user = users.find(u => u.email === loginEmail.trim() && u.passwordHash === hashPwd(loginPassword));
+    if (user) {
+      saveData('session', { userId: user.id, timestamp: Date.now() });
+      onLogin(user);
+    } else {
+      alert('Invalid email or password');
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    const users = loadData('users', []);
+    const user = users.find(u => u.email === bioEmail.trim());
+    if (!user) { alert('User not found'); return; }
+    if (!user.bioCred) { alert('No biometric credential registered'); return; }
+
+    setBioState('scanning');
+    try {
+      const cred = await navigator.credentials.get({
+        publicKey: {
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          allowCredentials: [{ id: Uint8Array.from(atob(user.bioCred), c => c.charCodeAt(0)), type: 'public-key' }],
+          userVerification: 'required', timeout: 60000
+        }
+      });
+      if (cred) {
+        setBioState('success');
+        setTimeout(() => {
+          saveData('session', { userId: user.id, timestamp: Date.now() });
+          onLogin(user);
+        }, 800);
+      }
+    } catch (e) {
+      setBioState('error');
+      setTimeout(() => setBioState('idle'), 2000);
+    }
+  };
+
+  const registerBiometric = async () => {
+    if (!pendingUser) return;
+    setBioState('scanning');
+    try {
+      const cred = await navigator.credentials.create({
+        publicKey: {
+          challenge: crypto.getRandomValues(new Uint8Array(32)),
+          rp: { name: 'ProHub', id: location.hostname },
+          user: { id: Uint8Array.from(pendingUser.id, c => c.charCodeAt(0)), name: pendingUser.email, displayName: pendingUser.name },
+          pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
+          authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+          timeout: 60000
+        }
+      });
+      if (cred) {
+        const users = loadData('users', []);
+        const idx = users.findIndex(u => u.id === pendingUser.id);
+        if (idx >= 0) {
+          users[idx].bioCred = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+          users[idx].bioRegDate = new Date().toISOString();
+          saveData('users', users);
+        }
+        setBioState('success');
+        setTimeout(() => {
+          saveData('session', { userId: pendingUser.id, timestamp: Date.now() });
+          onLogin(pendingUser);
+        }, 800);
+      }
+    } catch (e) {
+      setBioState('error');
+      setTimeout(() => { setBioState('idle'); setShowBioSetup(false); saveData('session', { userId: pendingUser.id, timestamp: Date.now() }); onLogin(pendingUser); }, 1500);
+    }
+  };
+
+  const skipBio = () => {
+    setShowBioSetup(false);
+    saveData('session', { userId: pendingUser.id, timestamp: Date.now() });
+    onLogin(pendingUser);
+  };
+
+  return (
+    <div className="auth-screen">
+      {isFileProt() && <div className="file-banner">⚠️ Running from file:// — some features (WebAuthn, Notifications) require a web server</div>}
+      <div className="auth-logo">ProHub</div>
+      <div className="auth-subtitle">Your Professional Command Center</div>
+
+      {showBioSetup ? (
+        <div className="auth-card" style={{textAlign:'center'}}>
+          <h3 style={{fontFamily:'Syne',fontWeight:700,marginBottom:8}}>Set Up Biometric Login</h3>
+          <p style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>Use your fingerprint or face to sign in faster</p>
+          <BioCircle state={bioState} onClick={registerBiometric} />
+          <p style={{fontSize:12,color:'var(--muted)',marginTop:8}}>{bioState === 'idle' ? 'Tap to register' : bioState === 'scanning' ? 'Scanning...' : bioState === 'success' ? 'Success!' : 'Failed — try again'}</p>
+          <button className="btn btn-ghost" style={{width:'100%',marginTop:16}} onClick={skipBio}>Skip for now</button>
+        </div>
+      ) : (
+        <div className="auth-card">
+          <div className="auth-tabs">
+            <button className={`auth-tab ${tab === 'login' ? 'active' : ''}`} onClick={() => setTab('login')}>Login</button>
+            <button className={`auth-tab ${tab === 'signup' ? 'active' : ''}`} onClick={() => setTab('signup')}>Sign Up</button>
+            <button className={`auth-tab ${tab === 'bio' ? 'active' : ''}`} onClick={() => setTab('bio')}>Biometric</button>
+          </div>
+
+          {tab === 'login' && (
+            <>
+              <div className="auth-input-group">
+                <label>Email</label>
+                <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} placeholder="you@company.com" />
+              </div>
+              <div className="auth-input-group">
+                <label>Password</label>
+                <input type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} placeholder="••••••" />
+              </div>
+              <button className="btn btn-primary auth-submit" onClick={handleLogin}>Sign In</button>
+            </>
+          )}
+
+          {tab === 'signup' && (
+            <>
+              <div className="auth-input-group">
+                <label>Full Name</label>
+                <input value={signupName} onChange={e => setSignupName(e.target.value)} placeholder="John Doe" />
+              </div>
+              <div className="auth-input-group">
+                <label>Email</label>
+                <input type="email" value={signupEmail} onChange={e => setSignupEmail(e.target.value)} placeholder="you@company.com" />
+              </div>
+              <div className="auth-input-group">
+                <label>Password</label>
+                <input type="password" value={signupPassword} onChange={e => setSignupPassword(e.target.value)} placeholder="Min 6 characters" />
+              </div>
+              <button className="btn btn-primary auth-submit" onClick={handleSignup}>Create Account</button>
+            </>
+          )}
+
+          {tab === 'bio' && (
+            <>
+              <div className="auth-input-group">
+                <label>Email</label>
+                <input type="email" value={bioEmail} onChange={e => setBioEmail(e.target.value)} placeholder="you@company.com" />
+              </div>
+              <BioCircle state={bioState} onClick={handleBiometricLogin} />
+              <p style={{fontSize:12,color:'var(--muted)',textAlign:'center',marginTop:8}}>{bioState === 'idle' ? 'Enter email, then tap to scan' : bioState === 'scanning' ? 'Authenticating...' : bioState === 'success' ? 'Welcome back!' : 'Authentication failed'}</p>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// APPSHELL — Header, Nav, Toast, Section Router
+// ═══════════════════════════════════════════════════════════════
+
+function AppShell({ user, onLogout }) {
+  const userId = user.id;
+  const [activeSection, setActiveSection] = useState('home');
+  const [navOpen, setNavOpen] = useState(false);
+  const [clock, setClock] = useState(new Date());
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
+
+  // Load persisted state
+  const [profile, setProfile] = useState(() => {
+    const users = loadData('users', []);
+    return users.find(u => u.id === userId) || user;
+  });
+  const [timetableData, setTimetableData] = useState(() => loadUser(userId, 'timetable', { wakeTime: '07:00', sleepTime: '23:00', slots: [] }));
+  const [fitnessData, setFitnessData] = useState(() => loadUser(userId, 'fitness', { totalSecs: 0, focusMins: 0, dailyTarget: 1800, history: [] }));
+  const [todos, setTodos] = useState(() => loadUser(userId, 'todos', []));
+  const [aiKey, setAIKey] = useState(() => loadData('aiKey', ''));
+  const [notifSummaries, setNotifSummaries] = useState(() => loadData('notifSummaries', []));
+  const [nowPlaying, setNowPlaying] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  // Clock
+  useEffect(() => {
+    const t = setInterval(() => setClock(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // PWA Install prompt
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setDeferredPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  // Request notification permission
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  const showToast = useCallback((msg) => {
+    setToast(msg);
+    clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  const handleInstall = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') setDeferredPrompt(null);
+    } else {
+      showToast('Install via browser menu → Add to Home Screen');
+    }
+  };
+
+  const navItems = [
+    { id: 'home', label: 'Home', icon: '🏠' },
+    { id: 'timetable', label: 'Timetable', icon: '📅' },
+    { id: 'fitness', label: 'Fitness', icon: '💪' },
+    { id: 'music', label: 'Music', icon: '🎵' },
+    { id: 'ai', label: 'AI', icon: '🤖' },
+    { id: 'tasks', label: 'Tasks', icon: '📋' },
+    { id: 'notifications', label: 'Notifications', icon: '🔔' },
+    { id: 'settings', label: 'Settings', icon: '⚙️' },
+  ];
+
+  const unreadCount = notifSummaries.filter(n => !n.read && !n.archived).length;
+  const hasNoTimetable = !timetableData.slots || timetableData.slots.length === 0;
+
+  const renderSection = () => {
+    switch (activeSection) {
+      case 'home': return <Home profile={profile} timetableData={timetableData} fitnessData={fitnessData} todos={todos} nowPlaying={nowPlaying} isPlaying={isPlaying} onNavigate={setActiveSection} />;
+      case 'timetable': return <Timetable userId={userId} timetableData={timetableData} onUpdateTimetable={setTimetableData} showToast={showToast} />;
+      case 'fitness': return <Fitness userId={userId} fitnessData={fitnessData} onUpdateFitness={setFitnessData} showToast={showToast} />;
+      case 'music': return <Music nowPlaying={nowPlaying} isPlaying={isPlaying} onNowPlayingUpdate={(song, playing) => { setNowPlaying(song); setIsPlaying(playing); }} />;
+      case 'ai': return <AIAssistant userId={userId} profile={profile} timetableData={timetableData} fitnessData={fitnessData} aiKey={aiKey} onUpdateAIKey={setAIKey} showToast={showToast} />;
+      case 'tasks': return <Tasks userId={userId} todos={todos} onUpdateTodos={setTodos} showToast={showToast} />;
+      case 'notifications': return <Notifications notifSummaries={notifSummaries} onUpdateNotifSummaries={setNotifSummaries} />;
+      case 'settings': return <Settings userId={userId} profile={profile} onUpdateProfile={setProfile} aiKey={aiKey} onUpdateAIKey={(k) => { setAIKey(k); saveData('aiKey', k); }} onLogout={onLogout} showToast={showToast} />;
+      default: return <Home profile={profile} timetableData={timetableData} fitnessData={fitnessData} todos={todos} nowPlaying={nowPlaying} isPlaying={isPlaying} onNavigate={setActiveSection} />;
+    }
+  };
+
+  return (
+    <div className="app-shell">
+      <header className="header">
+        <div className="header-left">
+          <div className="hamburger" onClick={() => setNavOpen(true)}>☰</div>
+          <span className="logo-text">ProHub</span>
+        </div>
+        <div className="header-right">
+          <span className="live-clock">{clock.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
+          <div className="avatar">{profile.name?.[0]?.toUpperCase() || '?'}</div>
+        </div>
+      </header>
+
+      <div className={`nav-overlay ${navOpen ? 'open' : ''}`} onClick={() => setNavOpen(false)}></div>
+      <div className={`nav-panel ${navOpen ? 'open' : ''}`}>
+        <div className="nav-user-card">
+          <div className="nav-avatar">{profile.name?.[0]?.toUpperCase() || '?'}</div>
+          <div className="nav-name">{profile.name || 'User'}</div>
+          <div className="nav-email">{profile.email || ''}</div>
+        </div>
+        <div className="nav-items">
+          {navItems.map(item => (
+            <div key={item.id} className={`nav-item ${activeSection === item.id ? 'active' : ''}`} onClick={() => { setActiveSection(item.id); setNavOpen(false); }}>
+              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
+              {item.id === 'timetable' && hasNoTimetable && <span className="nav-badge">!</span>}
+              {item.id === 'notifications' && unreadCount > 0 && <span className="nav-badge">{unreadCount}</span>}
+            </div>
+          ))}
+        </div>
+        <div className="nav-footer">
+          <button className="install-btn" onClick={handleInstall}>📲 Install App</button>
+          <button className="logout-btn" onClick={onLogout}>Logout</button>
+        </div>
+      </div>
+
+      <main className="content-area" key={activeSection}>
+        {renderSection()}
+      </main>
+
+      {toast && (
+        <div className="toast">
+          <span>✓</span> {toast}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// APP ROOT
+// ═══════════════════════════════════════════════════════════════
+
+function App() {
+  const [screen, setScreen] = useState('auth');
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    // Check for existing session
+    const session = loadData('session', null);
+    if (session) {
+      const users = loadData('users', []);
+      const user = users.find(u => u.id === session.userId);
+      if (user) {
+        setCurrentUser(user);
+        setScreen('app');
+      }
+    }
+
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        self.addEventListener('install', e => self.skipWaiting());
+        self.addEventListener('activate', e => e.waitUntil(clients.claim()));
+        self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+          const clone = res.clone();
+          caches.open('prohub-v1').then(cache => cache.put(e.request, clone));
+          return res;
+        })));
+      `;
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      const swUrl = URL.createObjectURL(blob);
+      navigator.serviceWorker.register(swUrl).catch(() => {});
+
+      // Inject manifest
+      const manifest = {
+        name: 'ProHub', short_name: 'ProHub',
+        start_url: '.', display: 'standalone',
+        theme_color: '#08090D', background_color: '#08090D',
+        icons: [{ src: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%236366F1%22 width=%22100%22 height=%22100%22 rx=%2220%22/><text x=%2250%22 y=%2265%22 font-size=%2250%22 text-anchor=%22middle%22 fill=%22white%22>⚡</text></svg>', sizes: 'any', type: 'image/svg+xml' }]
+      };
+      const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+      const manifestUrl = URL.createObjectURL(manifestBlob);
+      const link = document.createElement('link');
+      link.rel = 'manifest'; link.href = manifestUrl;
+      document.head.appendChild(link);
+    }
+  }, []);
+
+  const handleLogin = (user) => {
+    setCurrentUser(user);
+    setScreen('app');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('ph_session');
+    setCurrentUser(null);
+    setScreen('auth');
+  };
+
+  return (
+    <>
+      {screen === 'auth' && <AuthScreen onLogin={handleLogin} />}
+      {screen === 'app' && currentUser && <AppShell user={currentUser} onLogout={handleLogout} />}
+    </>
+  );
+}
+
+// Mount
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
