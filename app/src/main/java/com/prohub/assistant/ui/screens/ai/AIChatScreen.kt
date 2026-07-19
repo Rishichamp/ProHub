@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
@@ -27,6 +28,8 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
@@ -34,7 +37,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AIChatViewModel @Inject constructor(
-    private val securePrefs: SecurePrefs
+    private val securePrefs: SecurePrefs,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -42,6 +46,11 @@ class AIChatViewModel @Inject constructor(
         .build()
 
     suspend fun sendMessage(message: String): String? {
+        // Check for real device automation first (alarms, opening apps, weather)
+        com.prohub.assistant.service.AppAutomation.tryHandleCommand(context, message)?.let {
+            return it
+        }
+
         val apiKey = securePrefs.getGeminiKey()
         if (apiKey.isBlank()) return "Please set your Gemini API key in Settings first."
 
@@ -186,50 +195,63 @@ fun AIChatScreen(
                 }
             }
 
-            Row(
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(containerColor = ProHubColors.Card),
+                border = androidx.compose.foundation.BorderStroke(1.dp, ProHubColors.Border),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
             ) {
-                OutlinedTextField(
-                    value = inputText,
-                    onValueChange = { inputText = it },
-                    placeholder = { Text("Ask ProHub AI...", color = ProHubColors.Text2) },
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = ProHubColors.Text,
-                        unfocusedTextColor = ProHubColors.Text,
-                        focusedBorderColor = ProHubColors.Indigo,
-                        unfocusedBorderColor = ProHubColors.Border
-                    ),
-                    maxLines = 4
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                IconButton(
-                    onClick = {
-                        if (inputText.isNotBlank() && !isLoading) {
-                            val userMsg = inputText.trim()
-                            messages = messages + ChatMessage(userMsg, true)
-                            inputText = ""
-                            isLoading = true
-                            scope.launch {
-                                val response = viewModel.sendMessage(userMsg)
-                                isLoading = false
-                                messages = messages + ChatMessage(
-                                    response ?: "No response",
-                                    false
-                                )
-                            }
-                        }
-                    },
-                    enabled = !isLoading && inputText.isNotBlank()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        Icons.Default.Send,
-                        contentDescription = "Send",
-                        tint = if (inputText.isNotBlank() && !isLoading) ProHubColors.Indigo else ProHubColors.Muted
+                    TextField(
+                        value = inputText,
+                        onValueChange = { inputText = it },
+                        placeholder = { Text("Ask ProHub AI...", color = ProHubColors.Text2) },
+                        modifier = Modifier.weight(1f),
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = ProHubColors.Text,
+                            unfocusedTextColor = ProHubColors.Text,
+                            focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                            unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                            disabledContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                            focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                            unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                            cursorColor = ProHubColors.Indigo
+                        ),
+                        maxLines = 4
                     )
+                    IconButton(
+                        onClick = {
+                            if (inputText.isNotBlank() && !isLoading) {
+                                val userMsg = inputText.trim()
+                                messages = messages + ChatMessage(userMsg, true)
+                                inputText = ""
+                                isLoading = true
+                                scope.launch {
+                                    val response = viewModel.sendMessage(userMsg)
+                                    isLoading = false
+                                    messages = messages + ChatMessage(
+                                        response ?: "No response",
+                                        false
+                                    )
+                                }
+                            }
+                        },
+                        enabled = !isLoading && inputText.isNotBlank()
+                    ) {
+                        Icon(
+                            Icons.Default.Send,
+                            contentDescription = "Send",
+                            tint = if (inputText.isNotBlank() && !isLoading) ProHubColors.Indigo else ProHubColors.Muted
+                        )
+                    }
                 }
             }
         }

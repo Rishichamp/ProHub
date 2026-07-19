@@ -186,6 +186,12 @@ class FloatingBubbleService : Service() {
     }
 
     private fun processCommand(command: String) {
+        // Check for real device automation first (alarms, opening apps, weather)
+        AppAutomation.tryHandleCommand(applicationContext, command)?.let { response ->
+            speak(response)
+            return
+        }
+
         when {
             command.contains("what's", ignoreCase = true) &&
                     command.contains("mean", ignoreCase = true) -> {

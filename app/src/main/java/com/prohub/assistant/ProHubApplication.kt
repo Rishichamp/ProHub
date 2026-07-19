@@ -38,6 +38,26 @@ class ProHubApplication : Application(), Configuration.Provider {
         }
 
         ReminderEscalationWorker.schedule(this)
+
+        // Self-healing: on every app launch, ensure the voice assistant service is
+        // running if the user has already granted the permissions it needs. This
+        // covers existing installs (from before this fix) and cases where Android
+        // killed the service in the background — not just after a device reboot.
+        startVoiceServiceIfPermitted()
+    }
+
+    private fun startVoiceServiceIfPermitted() {
+        val hasMic = androidx.core.content.ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.RECORD_AUDIO
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val hasOverlay = android.provider.Settings.canDrawOverlays(this)
+
+        if (hasMic && hasOverlay) {
+            val serviceIntent = android.content.Intent(
+                this, com.prohub.assistant.service.FloatingBubbleService::class.java
+            )
+            androidx.core.content.ContextCompat.startForegroundService(this, serviceIntent)
+        }
     }
 
     private fun createNotificationChannels() {

@@ -261,6 +261,84 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Voice Assistant Section
+            FadeInUpAnimation(visible = true, delayMillis = 350) {
+                ExpandableSection(
+                    id = "voice",
+                    title = "🎙️ Voice Assistant",
+                    isExpanded = expandedSections.contains("voice"),
+                    onToggle = { toggleSection("voice") }
+                ) {
+                    var overlayGranted by remember {
+                        mutableStateOf(android.provider.Settings.canDrawOverlays(context))
+                    }
+                    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+                    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+                        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                                overlayGranted = android.provider.Settings.canDrawOverlays(context)
+                            }
+                        }
+                        lifecycleOwner.lifecycle.addObserver(observer)
+                        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                    }
+
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "Say \"Hey ProHub\" to activate hands-free voice commands. This needs the floating overlay permission below.",
+                            color = ProHubColors.Text2,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                if (overlayGranted) "Overlay permission: Granted" else "Overlay permission: Not granted",
+                                color = if (overlayGranted) ProHubColors.Green else ProHubColors.Red,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Button(
+                                onClick = {
+                                    context.startActivity(
+                                        android.content.Intent(
+                                            android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                            android.net.Uri.parse("package:${context.packageName}")
+                                        )
+                                    )
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (overlayGranted) ProHubColors.Green else ProHubColors.Indigo
+                                )
+                            ) {
+                                Text(if (overlayGranted) "Granted" else "Allow")
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = {
+                                val serviceIntent = android.content.Intent(
+                                    context, com.prohub.assistant.service.FloatingBubbleService::class.java
+                                )
+                                androidx.core.content.ContextCompat.startForegroundService(context, serviceIntent)
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Voice assistant (re)started")
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = overlayGranted,
+                            colors = ButtonDefaults.buttonColors(containerColor = ProHubColors.Purple)
+                        ) {
+                            Text("Start / Restart Voice Assistant")
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             // Data Management Section
             FadeInUpAnimation(visible = true, delayMillis = 400) {
                 ExpandableSection(

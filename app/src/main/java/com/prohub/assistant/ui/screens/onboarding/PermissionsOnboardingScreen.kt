@@ -2,6 +2,7 @@ package com.prohub.assistant.ui.screens.onboarding
 
 import android.Manifest
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -12,16 +13,34 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
+import com.prohub.assistant.service.FloatingBubbleService
 import com.prohub.assistant.ui.theme.ProHubColors
 
 @Composable
 fun PermissionsOnboardingScreen(navController: NavController) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     var micGranted by remember { mutableStateOf(false) }
     var notifGranted by remember { mutableStateOf(false) }
+    var overlayGranted by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
+
+    // Overlay permission is granted via a separate system Settings screen, not a
+    // normal permission dialog — re-check its state whenever we return to this screen.
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                overlayGranted = Settings.canDrawOverlays(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val micLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -74,7 +93,24 @@ fun PermissionsOnboardingScreen(navController: NavController) {
                     notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
         }
+
+        // Floating Assistant (draw over other apps) — REQUIRED for the "Hey ProHub" bubble
+        PermissionCard(
+            title = "Floating Assistant",
+            desc = "Required for the 'Hey ProHub' voice bubble to appear over other apps",
+            granted = overlayGranted,
+            onRequest = {
+                context.startActivity(
+                    Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:${context.packageName}")
+                    )
+                )
+            }
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -91,11 +127,33 @@ fun PermissionsOnboardingScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(40.dp))
 
         Button(
-            onClick = { navController.navigate("todos") { popUpTo("onboarding") { inclusive = true } } },
+            onClick = {
+                context.getSharedPreferences("onboarding_prefs", android.content.Context.MODE_PRIVATE)
+                    .edit().putBoolean("completed", true).apply()
+
+                // Actually start the voice assistant service now, rather than only
+                // after a device reboot (which was the previous, broken behavior).
+                if (micGranted && Settings.canDrawOverlays(context)) {
+                    val serviceIntent = Intent(context, FloatingBubbleService::class.java)
+                    androidx.core.content.ContextCompat.startForegroundService(context, serviceIntent)
+                }
+
+                navController.navigate("todos") { popUpTo("onboarding") { inclusive = true } }
+            },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = ProHubColors.Indigo)
         ) {
             Text("Get Started", modifier = Modifier.padding(vertical = 8.dp))
+        }
+
+        if (!overlayGranted || !micGranted) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Voice commands need Microphone + Floating Assistant access to work.",
+                color = ProHubColors.Text2,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
