@@ -265,7 +265,7 @@ fun SettingsScreen(
             FadeInUpAnimation(visible = true, delayMillis = 350) {
                 ExpandableSection(
                     id = "voice",
-                    title = "🎙️ Voice Assistant",
+                    title = "🎙️ Sage Voice Assistant",
                     isExpanded = expandedSections.contains("voice"),
                     onToggle = { toggleSection("voice") }
                 ) {
@@ -285,7 +285,7 @@ fun SettingsScreen(
 
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            "Say \"Hey ProHub\" to activate hands-free voice commands. This needs the floating overlay permission below.",
+                            "Say \"Hey Sage\" to activate hands-free voice commands. This needs the floating overlay permission below.",
                             color = ProHubColors.Text2,
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -331,7 +331,7 @@ fun SettingsScreen(
                             enabled = overlayGranted,
                             colors = ButtonDefaults.buttonColors(containerColor = ProHubColors.Purple)
                         ) {
-                            Text("Start / Restart Voice Assistant")
+                            Text("Start / Restart Sage")
                         }
                     }
                 }

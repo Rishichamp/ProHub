@@ -2,6 +2,14 @@
 
 package com.prohub.assistant.ui.screens.ai
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,12 +17,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -114,9 +125,115 @@ fun AIChatScreen(
     var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
     var inputText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var isListening by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val context = LocalContext.current
+
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> if (!granted) {
+        scope.launch { snackbarHostState.showSnackbar("Microphone permission is needed for voice input") }
+    } }
+
+    fun submitMessage(text: String) {
+        if (text.isBlank()) return
+
+        // Voice/typed navigation commands act immediately, e.g. "open tasks",
+        // "go to settings" — these move you to the right section instead of
+        // just being sent to Sage as a chat message.
+        val navRoute = com.prohub.assistant.service.AppAutomation.tryGetNavigationRoute(text)
+        if (navRoute != null) {
+            inputText = ""
+            if (navRoute == "home") {
+                navController.navigate("home") { popUpTo("home") { inclusive = true } }
+            } else {
+                navController.navigate(navRoute)
+            }
+            return
+        }
+
+        val userMsg = text.trim()
+        messages = messages + ChatMessage(userMsg, true)
+        inputText = ""
+        isLoading = true
+        scope.launch {
+            val response = viewModel.sendMessage(userMsg)
+            isLoading = false
+            messages = messages + ChatMessage(response ?: "No response", false)
+        }
+    }
+
+    val speechRecognizer = remember {
+        if (SpeechRecognizer.isRecognitionAvailable(context)) {
+            SpeechRecognizer.createSpeechRecognizer(context)
+        } else null
+    }
+
+    DisposableEffect(Unit) {
+        speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+            override fun onReadyForSpeech(params: android.os.Bundle?) {}
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() {}
+            override fun onError(error: Int) { isListening = false }
+            override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
+
+            override fun onPartialResults(partialResults: android.os.Bundle?) {
+                // Live preview only, while still speaking — does not act yet
+                val text = partialResults
+                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    ?.firstOrNull()
+                if (text != null) inputText = text
+            }
+
+            override fun onResults(results: android.os.Bundle?) {
+                val text = results
+                    ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    ?.firstOrNull()
+                isListening = false
+                // Voice command finished — act on it immediately, same as
+                // Sage's "Hey Sage" pipeline, instead of waiting for a manual tap.
+                if (!text.isNullOrBlank()) submitMessage(text)
+            }
+        })
+        onDispose { speechRecognizer?.destroy() }
+    }
+
+    fun startListening() {
+        val hasMic = ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+        if (!hasMic) {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            return
+        }
+        if (speechRecognizer == null) {
+            scope.launch { snackbarHostState.showSnackbar("Voice input isn't available on this device") }
+            return
+        }
+        inputText = ""
+        isListening = true
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        }
+        speechRecognizer.startListening(intent)
+    }
+
+    fun stopListening() {
+        speechRecognizer?.stopListening()
+        isListening = false
+    }
+
+    // Auto-start dictation if we arrived here via Home's "Voice" quick action
+    LaunchedEffect(Unit) {
+        if (com.prohub.assistant.service.VoiceEntryBridge.shouldAutoStart.value) {
+            com.prohub.assistant.service.VoiceEntryBridge.consume()
+            startListening()
+        }
+    }
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -127,7 +244,7 @@ fun AIChatScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("AI Assistant", color = ProHubColors.Text) },
+                title = { Text("Sage", color = ProHubColors.Text) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = ProHubColors.Bg)
             )
         },
@@ -213,7 +330,7 @@ fun AIChatScreen(
                     TextField(
                         value = inputText,
                         onValueChange = { inputText = it },
-                        placeholder = { Text("Ask ProHub AI...", color = ProHubColors.Text2) },
+                        placeholder = { Text("Ask Sage...", color = ProHubColors.Text2) },
                         modifier = Modifier.weight(1f),
                         colors = TextFieldDefaults.colors(
                             focusedTextColor = ProHubColors.Text,
@@ -227,21 +344,17 @@ fun AIChatScreen(
                         ),
                         maxLines = 4
                     )
+                    IconButton(onClick = { if (isListening) stopListening() else startListening() }) {
+                        Icon(
+                            Icons.Default.Mic,
+                            contentDescription = if (isListening) "Stop listening" else "Voice input",
+                            tint = if (isListening) ProHubColors.Red else ProHubColors.Text2
+                        )
+                    }
                     IconButton(
                         onClick = {
                             if (inputText.isNotBlank() && !isLoading) {
-                                val userMsg = inputText.trim()
-                                messages = messages + ChatMessage(userMsg, true)
-                                inputText = ""
-                                isLoading = true
-                                scope.launch {
-                                    val response = viewModel.sendMessage(userMsg)
-                                    isLoading = false
-                                    messages = messages + ChatMessage(
-                                        response ?: "No response",
-                                        false
-                                    )
-                                }
+                                submitMessage(inputText)
                             }
                         },
                         enabled = !isLoading && inputText.isNotBlank()

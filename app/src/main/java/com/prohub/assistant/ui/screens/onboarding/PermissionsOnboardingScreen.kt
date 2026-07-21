@@ -74,7 +74,7 @@ fun PermissionsOnboardingScreen(navController: NavController) {
         // Mic Permission
         PermissionCard(
             title = "Microphone Access",
-            desc = "For voice commands and AI assistant",
+            desc = "For voice commands and Sage, your AI assistant",
             granted = micGranted,
             onRequest = {
                 micLauncher.launch(Manifest.permission.RECORD_AUDIO)
@@ -97,10 +97,10 @@ fun PermissionsOnboardingScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // Floating Assistant (draw over other apps) — REQUIRED for the "Hey ProHub" bubble
+        // Floating Assistant (draw over other apps) — REQUIRED for the "Hey Sage" bubble
         PermissionCard(
             title = "Floating Assistant",
-            desc = "Required for the 'Hey ProHub' voice bubble to appear over other apps",
+            desc = "Required for the 'Hey Sage' voice bubble to appear over other apps",
             granted = overlayGranted,
             onRequest = {
                 context.startActivity(

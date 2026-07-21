@@ -1,5 +1,7 @@
 package com.prohub.assistant.data.repository
 
+import com.prohub.assistant.data.db.ExerciseLogDao
+import com.prohub.assistant.data.db.ExerciseLogEntity
 import com.prohub.assistant.data.db.FitnessDao
 import com.prohub.assistant.data.db.FitnessEntry
 import com.prohub.assistant.data.db.FitnessGoal
@@ -12,9 +14,43 @@ import javax.inject.Singleton
 @Singleton
 class FitnessRepository @Inject constructor(
     private val fitnessDao: FitnessDao,
-    private val goalDao: FitnessGoalDao
+    private val goalDao: FitnessGoalDao,
+    private val exerciseLogDao: ExerciseLogDao
 ) {
     fun getAllEntries(): Flow<List<FitnessEntry>> = fitnessDao.getAllEntries()
+
+    fun todayStart(): Long {
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }
+        return cal.timeInMillis
+    }
+
+    fun getTodaySessionExercises(): Flow<List<ExerciseLogEntity>> =
+        exerciseLogDao.getForSession(todayStart())
+
+    /** Logs a finished, timed exercise, and mirrors it into the existing
+     * FitnessEntry rollup table so Home dashboard stats stay accurate. */
+    suspend fun logExercise(name: String, durationSeconds: Int) {
+        exerciseLogDao.insert(
+            ExerciseLogEntity(
+                sessionDate = todayStart(),
+                name = name,
+                durationSeconds = durationSeconds
+            )
+        )
+        fitnessDao.insert(
+            FitnessEntry(
+                date = System.currentTimeMillis(),
+                activeMinutes = (durationSeconds / 60).coerceAtLeast(1),
+                workoutType = name,
+                durationMinutes = durationSeconds / 60
+            )
+        )
+    }
+
+    suspend fun deleteExerciseLog(entry: ExerciseLogEntity) = exerciseLogDao.delete(entry)
 
     fun getTodayEntries(): Flow<List<FitnessEntry>> {
         val (start, end) = getTodayRange()

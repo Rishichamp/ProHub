@@ -2,10 +2,12 @@ package com.prohub.assistant.ui.screens.fitness
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.prohub.assistant.data.db.ExerciseLogEntity
 import com.prohub.assistant.data.db.FitnessEntry
 import com.prohub.assistant.data.db.FitnessGoal
 import com.prohub.assistant.data.repository.FitnessRepository
 import com.prohub.assistant.data.repository.FitnessStats
+import com.prohub.assistant.service.ActiveTimerBridge
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -22,10 +24,58 @@ class FitnessViewModel @Inject constructor(
     val todayEntries = repository.getTodayEntries()
     val weekEntries = repository.getWeekEntries()
     val activeGoals = repository.getActiveGoals()
+    val todaySessionExercises = repository.getTodaySessionExercises()
+
+    // The exercise currently being timed, and when it started (null = no active timer)
+    private val _activeExerciseName = MutableStateFlow<String?>(null)
+    val activeExerciseName: StateFlow<String?> = _activeExerciseName.asStateFlow()
+    private val _activeStartTime = MutableStateFlow<Long?>(null)
+    val activeStartTime: StateFlow<Long?> = _activeStartTime.asStateFlow()
 
     init {
         loadTodayStats()
         loadWeekStats()
+
+        // Listen for Sage voice commands like "start timing for running"
+        viewModelScope.launch {
+            ActiveTimerBridge.requestedExercise.collect { name ->
+                if (name != null) {
+                    startTimer(name)
+                    ActiveTimerBridge.consume()
+                }
+            }
+        }
+    }
+
+    fun startTimer(exerciseName: String) {
+        if (exerciseName.isBlank()) return
+        // If something else is already running, stop/log it first
+        if (_activeExerciseName.value != null) {
+            stopTimer()
+        }
+        _activeExerciseName.value = exerciseName
+        _activeStartTime.value = System.currentTimeMillis()
+    }
+
+    fun stopTimer() {
+        val name = _activeExerciseName.value ?: return
+        val start = _activeStartTime.value ?: return
+        val durationSeconds = ((System.currentTimeMillis() - start) / 1000).toInt().coerceAtLeast(1)
+
+        viewModelScope.launch {
+            repository.logExercise(name, durationSeconds)
+            loadTodayStats()
+        }
+
+        _activeExerciseName.value = null
+        _activeStartTime.value = null
+    }
+
+    fun deleteSessionExercise(entry: ExerciseLogEntity) {
+        viewModelScope.launch {
+            repository.deleteExerciseLog(entry)
+            loadTodayStats()
+        }
     }
 
     fun loadTodayStats() {

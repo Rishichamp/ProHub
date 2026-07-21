@@ -46,8 +46,43 @@ object AppAutomation {
         "alarm" to "com.google.android.deskclock"
     )
 
+    // Phrases that mean "navigate to this screen inside ProHub" — checked
+    // separately from KNOWN_APPS since these are in-app Compose destinations,
+    // not other Android apps to launch.
+    private val NAV_TARGETS = linkedMapOf(
+        "tasks" to "todos", "todo" to "todos", "todos" to "todos", "to-do" to "todos",
+        "schedule" to "timetable", "timetable" to "timetable",
+        "fitness" to "fitness", "workout" to "fitness", "exercise" to "fitness",
+        "settings" to "settings",
+        "notifications" to "notifications", "alerts" to "notifications",
+        "chat" to "ai", "ai chat" to "ai", "assistant" to "ai",
+        "home" to "home", "dashboard" to "home"
+    )
+
+    /**
+     * Checks if a command means "go to this screen" (e.g. "open tasks",
+     * "go to settings", "show my fitness"). Returns the nav-graph route to
+     * navigate to, or null if this isn't a navigation command.
+     */
+    fun tryGetNavigationRoute(command: String): String? {
+        val cmd = command.lowercase().trim()
+        val isNavPhrase = cmd.startsWith("open ") || cmd.startsWith("go to ") ||
+                cmd.startsWith("show ") || cmd.startsWith("take me to ") ||
+                cmd.startsWith("navigate to ")
+        if (!isNavPhrase) return null
+
+        // Longer phrases first so "ai chat" matches before "chat" alone, etc.
+        return NAV_TARGETS.entries
+            .sortedByDescending { it.key.length }
+            .firstOrNull { cmd.contains(it.key) }
+            ?.value
+    }
+
     fun tryHandleCommand(context: Context, command: String): String? {
         val cmd = command.lowercase().trim()
+
+        // "start timing for running" / "start timer for football" / "start a timer for cardio"
+        startExerciseTimer(cmd)?.let { return it }
 
         // "set an alarm for/at 5:30 am"
         setAlarmIntent(context, cmd)?.let { return it }
@@ -61,6 +96,16 @@ object AppAutomation {
         }
 
         return null
+    }
+
+    private fun startExerciseTimer(cmd: String): String? {
+        val regex = Regex("""start (?:a )?tim(?:er|ing) for (?:my )?([a-z ]+)""")
+        val match = regex.find(cmd) ?: return null
+        val exerciseName = match.groupValues[1].trim().replaceFirstChar { it.uppercase() }
+        if (exerciseName.isBlank()) return null
+
+        ActiveTimerBridge.requestStart(exerciseName)
+        return "Starting timer for $exerciseName."
     }
 
     private fun setAlarmIntent(context: Context, cmd: String): String? {

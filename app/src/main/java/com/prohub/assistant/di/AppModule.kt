@@ -58,6 +58,9 @@ object AppModule {
     fun provideFitnessGoalDao(db: AppDatabase): FitnessGoalDao = db.fitnessGoalDao()
 
     @Provides
+    fun provideExerciseLogDao(db: AppDatabase): com.prohub.assistant.data.db.ExerciseLogDao = db.exerciseLogDao()
+
+    @Provides
     @Singleton
     fun provideSecurePrefs(@ApplicationContext context: Context): SecurePrefs {
         return SecurePrefs(context)
@@ -79,8 +82,9 @@ object AppModule {
     @Singleton
     fun provideFitnessRepository(
         fitnessDao: FitnessDao,
-        goalDao: FitnessGoalDao
+        goalDao: FitnessGoalDao,
+        exerciseLogDao: com.prohub.assistant.data.db.ExerciseLogDao
     ): FitnessRepository {
-        return FitnessRepository(fitnessDao, goalDao)
+        return FitnessRepository(fitnessDao, goalDao, exerciseLogDao)
     }
 }

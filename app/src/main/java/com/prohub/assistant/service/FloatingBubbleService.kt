@@ -48,7 +48,7 @@ class FloatingBubbleService : Service() {
         const val CHANNEL_ID = "prohub_floating"
         const val NOTIFICATION_ID = 1001
         const val TAG = "FloatingBubble"
-        const val WAKE_WORD = "hey prohub"
+        const val WAKE_WORD = "hey sage"
     }
 
     override fun onCreate() {
@@ -85,8 +85,8 @@ class FloatingBubbleService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("ProHub is listening")
-            .setContentText("Say \"Hey ProHub\" to activate")
+            .setContentTitle("Sage is listening")
+            .setContentText("Say \"Hey Sage\" to activate")
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
@@ -186,6 +186,19 @@ class FloatingBubbleService : Service() {
     }
 
     private fun processCommand(command: String) {
+        // "open tasks" / "go to settings" etc — bring ProHub forward to that screen
+        AppAutomation.tryGetNavigationRoute(command)?.let { route ->
+            PendingNavigationBridge.requestNavigation(route)
+            val launchIntent = Intent(this, com.prohub.assistant.MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            startActivity(launchIntent)
+            speak("Opening ${route.replaceFirstChar { it.uppercase() }}.")
+            return
+        }
+
         // Check for real device automation first (alarms, opening apps, weather)
         AppAutomation.tryHandleCommand(applicationContext, command)?.let { response ->
             speak(response)

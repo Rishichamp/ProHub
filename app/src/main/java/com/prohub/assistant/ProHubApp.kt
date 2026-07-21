@@ -37,6 +37,20 @@ fun ProHubApp(
     val authState by authManager.authState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val onboardingPrefs = remember { context.getSharedPreferences("onboarding_prefs", android.content.Context.MODE_PRIVATE) }
+    val startDestination = remember {
+        if (onboardingPrefs.getBoolean("completed", false)) "home" else "onboarding"
+    }
+
+    // Sage's "Hey Sage, open tasks" etc. lands here once MainActivity is brought forward
+    val pendingRoute by com.prohub.assistant.service.PendingNavigationBridge.pendingRoute.collectAsState()
+    LaunchedEffect(pendingRoute) {
+        pendingRoute?.let { route ->
+            navController.navigate(route)
+            com.prohub.assistant.service.PendingNavigationBridge.consume()
+        }
+    }
 
     if (authState.requiresAuth) {
         AuthDialog(
@@ -102,7 +116,7 @@ fun ProHubApp(
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = "onboarding",
+            startDestination = startDestination,
             modifier = Modifier.padding(paddingValues)
         ) {
             composable("onboarding") { PermissionsOnboardingScreen(navController) }

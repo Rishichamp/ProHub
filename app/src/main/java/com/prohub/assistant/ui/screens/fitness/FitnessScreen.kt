@@ -123,12 +123,27 @@ private fun TodayTab(
     goals: List<FitnessGoal>,
     viewModel: FitnessViewModel
 ) {
+    val sessionExercises by viewModel.todaySessionExercises.collectAsState(initial = emptyList())
+    val activeExerciseName by viewModel.activeExerciseName.collectAsState()
+    val activeStartTime by viewModel.activeStartTime.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
+        TodaySessionCard(
+            sessionExercises = sessionExercises,
+            activeExerciseName = activeExerciseName,
+            activeStartTime = activeStartTime,
+            onStart = { viewModel.startTimer(it) },
+            onStop = { viewModel.stopTimer() },
+            onDelete = { viewModel.deleteSessionExercise(it) }
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -168,6 +183,164 @@ private fun TodayTab(
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun TodaySessionCard(
+    sessionExercises: List<com.prohub.assistant.data.db.ExerciseLogEntity>,
+    activeExerciseName: String?,
+    activeStartTime: Long?,
+    onStart: (String) -> Unit,
+    onStop: () -> Unit,
+    onDelete: (com.prohub.assistant.data.db.ExerciseLogEntity) -> Unit
+) {
+    var showAddExerciseDialog by remember { mutableStateOf(false) }
+    var elapsedSeconds by remember { mutableStateOf(0) }
+
+    LaunchedEffect(activeStartTime) {
+        if (activeStartTime != null) {
+            while (true) {
+                elapsedSeconds = ((System.currentTimeMillis() - activeStartTime) / 1000).toInt()
+                kotlinx.coroutines.delay(1000)
+            }
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = ProHubColors.Card),
+        border = androidx.compose.foundation.BorderStroke(1.dp, ProHubColors.Border)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Today's Session",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = ProHubColors.Text,
+                    fontWeight = FontWeight.Bold
+                )
+                TextButton(onClick = { showAddExerciseDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = null, tint = ProHubColors.Indigo)
+                    Text(" Add Exercise", color = ProHubColors.Indigo)
+                }
+            }
+            Text(
+                "Football, running, cardio — anything you want, timed as you go. Try saying \"Hey Sage, start timing for running.\"",
+                color = ProHubColors.Text2,
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Live active timer
+            if (activeExerciseName != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = ProHubColors.Indigo.copy(alpha = 0.15f)),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(activeExerciseName, color = ProHubColors.Text, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "%02d:%02d".format(elapsedSeconds / 60, elapsedSeconds % 60),
+                                color = ProHubColors.Indigo,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Button(
+                            onClick = onStop,
+                            colors = ButtonDefaults.buttonColors(containerColor = ProHubColors.Red)
+                        ) {
+                            Text("Stop")
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Completed exercises today
+            if (sessionExercises.isEmpty() && activeExerciseName == null) {
+                Text(
+                    "No exercises logged yet today.",
+                    color = ProHubColors.Text2,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            } else {
+                sessionExercises.forEach { exercise ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(exercise.name, color = ProHubColors.Text)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "%d:%02d".format(exercise.durationSeconds / 60, exercise.durationSeconds % 60),
+                                color = ProHubColors.Text2
+                            )
+                            IconButton(onClick = { onDelete(exercise) }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = ProHubColors.Red)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showAddExerciseDialog) {
+        var exerciseName by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showAddExerciseDialog = false },
+            title = { Text("Add Exercise", color = ProHubColors.Text) },
+            text = {
+                OutlinedTextField(
+                    value = exerciseName,
+                    onValueChange = { exerciseName = it },
+                    placeholder = { Text("e.g. Football, Running, Cardio") },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = ProHubColors.Text,
+                        unfocusedTextColor = ProHubColors.Text,
+                        focusedBorderColor = ProHubColors.Indigo,
+                        unfocusedBorderColor = ProHubColors.Border
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (exerciseName.isNotBlank()) {
+                        onStart(exerciseName.trim())
+                    }
+                    showAddExerciseDialog = false
+                }) {
+                    Text("Start Timing", color = ProHubColors.Indigo)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddExerciseDialog = false }) {
+                    Text("Cancel", color = ProHubColors.Text2)
+                }
+            },
+            containerColor = ProHubColors.Card
+        )
     }
 }
 

@@ -9,9 +9,10 @@ import androidx.room.RoomDatabase
         SummaryEntity::class,
         TodoEntity::class,
         FitnessEntry::class,
-        FitnessGoal::class
+        FitnessGoal::class,
+        ExerciseLogEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -20,4 +21,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun todoDao(): TodoDao
     abstract fun fitnessDao(): FitnessDao
     abstract fun fitnessGoalDao(): FitnessGoalDao
+    abstract fun exerciseLogDao(): ExerciseLogDao
 }

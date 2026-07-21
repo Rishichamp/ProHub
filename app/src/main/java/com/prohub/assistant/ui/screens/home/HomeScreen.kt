@@ -197,7 +197,10 @@ fun HomeScreen(
                             icon = Icons.Default.Mic,
                             label = "Voice",
                             color = ProHubColors.Purple,
-                            onClick = { navController.navigate("ai") }
+                            onClick = {
+                                com.prohub.assistant.service.VoiceEntryBridge.requestAutoStart()
+                                navController.navigate("ai")
+                            }
                         )
                         QuickActionButton(
                             icon = Icons.Default.Assignment,
