@@ -8,7 +8,9 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -38,11 +40,16 @@ class FloatingBubbleService : Service() {
     @Inject
     lateinit var todoRepository: TodoRepository
 
-    private lateinit var speechRecognizer: SpeechRecognizer
+    // SpeechRecognizer MUST be created and used on the main thread only.
+    private var speechRecognizer: SpeechRecognizer? = null
     private var textToSpeech: TextToSpeech? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client = OkHttpClient()
     private var isListening = false
+
+    // All SpeechRecognizer callbacks fire on the main thread; we also post
+    // restarts there so the recognizer is always touched from one thread.
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     companion object {
         const val CHANNEL_ID = "prohub_floating"
@@ -54,15 +61,24 @@ class FloatingBubbleService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        initSpeechRecognizer()
+        // SpeechRecognizer creation must happen on the main thread.
+        mainHandler.post { initSpeechRecognizer() }
         initTextToSpeech()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification = createNotification()
         startForeground(NOTIFICATION_ID, notification)
-        startWakeWordListening()
-        return START_STICKY
+        // Wait for initSpeechRecognizer() posted in onCreate to finish first.
+        mainHandler.post { startWakeWordListening() }
+
+        // START_NOT_STICKY: if Android kills this service (e.g. low memory or
+        // battery saver), it does NOT resurrect it automatically. The user
+        // must re-enable Sage manually from Settings → Sage Voice Assistant.
+        // This stops the infinite crash-loop visible in the logcat where
+        // Android kept restarting the service only to hit the
+        // "foreground service from background / no mic access" wall again.
+        return START_NOT_STICKY
     }
 
     private fun createNotificationChannel() {
@@ -93,9 +109,10 @@ class FloatingBubbleService : Service() {
             .build()
     }
 
+    /** Must be called on the main thread. */
     private fun initSpeechRecognizer() {
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-        speechRecognizer.setRecognitionListener(object : RecognitionListener {
+        speechRecognizer?.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: android.os.Bundle?) {
                 Log.d(TAG, "Ready for speech")
             }
@@ -105,7 +122,12 @@ class FloatingBubbleService : Service() {
             override fun onEndOfSpeech() {}
             override fun onError(error: Int) {
                 Log.e(TAG, "Speech error: $error")
-                if (isListening) restartWakeWordListening()
+                // Restart only if we are supposed to be listening.
+                // Already on main thread (RecognitionListener callbacks are),
+                // so we just post with a small delay.
+                if (isListening) {
+                    mainHandler.postDelayed({ startWakeWordListening() }, 500)
+                }
             }
             override fun onResults(results: android.os.Bundle?) {
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
@@ -116,7 +138,7 @@ class FloatingBubbleService : Service() {
                     speak("Yes? I'm listening.")
                     startCommandListening()
                 } else {
-                    restartWakeWordListening()
+                    mainHandler.postDelayed({ startWakeWordListening() }, 300)
                 }
             }
             override fun onPartialResults(partialResults: android.os.Bundle?) {}
@@ -133,30 +155,26 @@ class FloatingBubbleService : Service() {
         }
     }
 
+    /** Must be called on the main thread. */
     private fun startWakeWordListening() {
-        isListening = true
+        if (!isListening) return
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }
         try {
-            speechRecognizer.startListening(intent)
+            speechRecognizer?.startListening(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start listening: ${e.message}")
         }
     }
 
-    private fun restartWakeWordListening() {
-        serviceScope.launch {
-            delay(500)
-            startWakeWordListening()
-        }
-    }
-
+    /** Must be called on the main thread. */
     private fun startCommandListening() {
-        speechRecognizer.stopListening()
+        speechRecognizer?.stopListening()
 
+        // Create a short-lived recognizer for the follow-up command.
         val commandRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         commandRecognizer.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: android.os.Bundle?) {}
@@ -166,12 +184,14 @@ class FloatingBubbleService : Service() {
             override fun onEndOfSpeech() {}
             override fun onError(error: Int) {
                 speak("I didn't catch that. Please try again.")
-                restartWakeWordListening()
+                commandRecognizer.destroy()
+                mainHandler.postDelayed({ startWakeWordListening() }, 300)
             }
             override fun onResults(results: android.os.Bundle?) {
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 val command = matches?.firstOrNull() ?: ""
                 Log.d(TAG, "Command: $command")
+                commandRecognizer.destroy()
                 processCommand(command)
             }
             override fun onPartialResults(partialResults: android.os.Bundle?) {}
@@ -196,12 +216,14 @@ class FloatingBubbleService : Service() {
             }
             startActivity(launchIntent)
             speak("Opening ${route.replaceFirstChar { it.uppercase() }}.")
+            mainHandler.postDelayed({ startWakeWordListening() }, 1000)
             return
         }
 
         // Check for real device automation first (alarms, opening apps, weather)
         AppAutomation.tryHandleCommand(applicationContext, command)?.let { response ->
             speak(response)
+            mainHandler.postDelayed({ startWakeWordListening() }, 1000)
             return
         }
 
@@ -284,47 +306,47 @@ class FloatingBubbleService : Service() {
         val apiKey = securePrefs.getGeminiKey()
         if (apiKey.isBlank()) {
             speak("Please set your Gemini API key in settings.")
+            mainHandler.postDelayed({ startWakeWordListening() }, 500)
             return
         }
-
         speak("Looking up the definition of $word")
-
         val prompt = "Define the word '$word' clearly with pronunciation, part of speech, meaning, and example usage."
         val response = callGemini(prompt, apiKey)
         speak(response ?: "I couldn't find a definition for $word.")
+        mainHandler.postDelayed({ startWakeWordListening() }, 500)
     }
 
     private suspend fun searchTrending(topic: String) {
         val apiKey = securePrefs.getGeminiKey()
         if (apiKey.isBlank()) {
             speak("Please set your Gemini API key in settings.")
+            mainHandler.postDelayed({ startWakeWordListening() }, 500)
             return
         }
-
         speak("Searching for trending topics on $topic")
-
         val prompt = "What are the top 5 trending topics about $topic right now? Provide brief summaries."
         val response = callGemini(prompt, apiKey)
         speak(response ?: "I couldn't find trending topics on $topic.")
+        mainHandler.postDelayed({ startWakeWordListening() }, 500)
     }
 
     private suspend fun calculate(command: String) {
-        // Try local calculation first
         val result = tryLocalCalculate(command)
         if (result != null) {
             speak("The answer is $result.")
+            mainHandler.postDelayed({ startWakeWordListening() }, 500)
             return
         }
-
         val apiKey = securePrefs.getGeminiKey()
         if (apiKey.isBlank()) {
             speak("Please set your Gemini API key in settings.")
+            mainHandler.postDelayed({ startWakeWordListening() }, 500)
             return
         }
-
         val prompt = "Calculate: $command. Provide just the numerical answer."
         val response = callGemini(prompt, apiKey)
         speak(response ?: "I couldn't calculate that.")
+        mainHandler.postDelayed({ startWakeWordListening() }, 500)
     }
 
     private fun tryLocalCalculate(command: String): Double? {
@@ -366,6 +388,7 @@ class FloatingBubbleService : Service() {
         )
         todoRepository.insert(todo)
         speak("I've added the task: $task")
+        mainHandler.postDelayed({ startWakeWordListening() }, 500)
     }
 
     private suspend fun showTasks() {
@@ -377,18 +400,20 @@ class FloatingBubbleService : Service() {
             val taskList = pending.take(3).joinToString(", ") { it.title }
             speak("You have $count pending tasks: $taskList")
         }
+        mainHandler.postDelayed({ startWakeWordListening() }, 500)
     }
 
     private suspend fun generalQuery(command: String) {
         val apiKey = securePrefs.getGeminiKey()
         if (apiKey.isBlank()) {
             speak("Please set your Gemini API key in settings.")
+            mainHandler.postDelayed({ startWakeWordListening() }, 500)
             return
         }
-
         val prompt = "Answer this question concisely: $command"
         val response = callGemini(prompt, apiKey)
         speak(response ?: "I'm not sure about that. Please try rephrasing.")
+        mainHandler.postDelayed({ startWakeWordListening() }, 500)
     }
 
     private suspend fun callGemini(prompt: String, apiKey: String): String? = withContext(Dispatchers.IO) {
@@ -433,10 +458,16 @@ class FloatingBubbleService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        super.onDestroy()
-        speechRecognizer.destroy()
+        isListening = false
+        mainHandler.removeCallbacksAndMessages(null)
+        // speechRecognizer must also be destroyed on the main thread.
+        mainHandler.post {
+            speechRecognizer?.destroy()
+            speechRecognizer = null
+        }
         textToSpeech?.shutdown()
         serviceScope.cancel()
+        super.onDestroy()
     }
 
     private suspend fun markTaskComplete(taskTitle: String) {
@@ -452,6 +483,7 @@ class FloatingBubbleService : Service() {
         } else {
             speak("I couldn't find a task matching '$taskTitle'.")
         }
+        mainHandler.postDelayed({ startWakeWordListening() }, 500)
     }
 
     private suspend fun snoozeTask(taskTitle: String) {
@@ -466,6 +498,7 @@ class FloatingBubbleService : Service() {
         } else {
             speak("I couldn't find that task.")
         }
+        mainHandler.postDelayed({ startWakeWordListening() }, 500)
     }
 
     private suspend fun showPendingTasks() {
@@ -477,6 +510,7 @@ class FloatingBubbleService : Service() {
             val taskList = pending.take(3).joinToString(", ") { it.title }
             speak("You have $count pending tasks: $taskList")
         }
+        mainHandler.postDelayed({ startWakeWordListening() }, 500)
     }
 
     private suspend fun readNextTask() {
@@ -489,6 +523,7 @@ class FloatingBubbleService : Service() {
             val next = pending.first()
             speak("Your next task is '${next.title}', due on ${next.dueDate} at ${next.dueTime ?: "any time"}.")
         }
+        mainHandler.postDelayed({ startWakeWordListening() }, 500)
     }
 
     private suspend fun snoozeAll(minutes: Int) {
@@ -498,6 +533,7 @@ class FloatingBubbleService : Service() {
             todoRepository.update(it.copy(snoozedUntil = snoozeTime))
         }
         speak("Snoozed all reminders for $minutes minutes.")
+        mainHandler.postDelayed({ startWakeWordListening() }, 500)
     }
 
     private fun extractMinutes(command: String): Int {

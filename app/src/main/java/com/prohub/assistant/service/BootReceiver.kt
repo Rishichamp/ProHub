@@ -8,15 +8,18 @@ import android.util.Log
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            Log.d("BootReceiver", "Device booted, starting ProHub services")
+            Log.d("BootReceiver", "Device booted, rescheduling reminders")
 
-            // Start floating bubble service
-            val serviceIntent = Intent(context, FloatingBubbleService::class.java)
-            context.startForegroundService(serviceIntent)
+            // FloatingBubbleService is intentionally NOT started here.
+            // Starting a foreground microphone service from a boot receiver
+            // is blocked by Android (API 29+) with:
+            //   "Foreground service started from background cannot have
+            //    location/camera/microphone access"
+            // Sage only starts when the user explicitly taps Start in
+            // Settings → Sage Voice Assistant.
 
-            // Reschedule daily reminder
             ReminderScheduler.scheduleDailyReminder(context)
-            Log.d("BootReceiver", "Daily reminder rescheduled for 8:00 PM")
+            Log.d("BootReceiver", "Daily reminder rescheduled")
         }
     }
 }

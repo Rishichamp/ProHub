@@ -62,6 +62,12 @@ dependencies {
     ksp("com.google.dagger:hilt-android-compiler:2.52")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
     implementation("androidx.hilt:hilt-work:1.2.0")
+    // ↓ THIS WAS MISSING — required for @HiltWorker / @AssistedInject to work.
+    //   Without it WorkManager falls back to the default (reflection) factory,
+    //   which can't find the @AssistedInject constructor and throws
+    //   NoSuchMethodException: ReminderEscalationWorker.<init> [Context, WorkerParameters]
+    //   on every periodic work run (visible in every session of the logcat).
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")

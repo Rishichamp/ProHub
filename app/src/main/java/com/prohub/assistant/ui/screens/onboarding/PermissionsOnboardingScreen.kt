@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
-import com.prohub.assistant.service.FloatingBubbleService
 import com.prohub.assistant.ui.theme.ProHubColors
 
 @Composable
@@ -131,13 +130,8 @@ fun PermissionsOnboardingScreen(navController: NavController) {
                 context.getSharedPreferences("onboarding_prefs", android.content.Context.MODE_PRIVATE)
                     .edit().putBoolean("completed", true).apply()
 
-                // Actually start the voice assistant service now, rather than only
-                // after a device reboot (which was the previous, broken behavior).
-                if (micGranted && Settings.canDrawOverlays(context)) {
-                    val serviceIntent = Intent(context, FloatingBubbleService::class.java)
-                    androidx.core.content.ContextCompat.startForegroundService(context, serviceIntent)
-                }
-
+                // Sage doesn't auto-start here — it only starts when explicitly
+                // enabled later from Settings → Sage Voice Assistant.
                 navController.navigate("todos") { popUpTo("onboarding") { inclusive = true } }
             },
             modifier = Modifier.fillMaxWidth(),

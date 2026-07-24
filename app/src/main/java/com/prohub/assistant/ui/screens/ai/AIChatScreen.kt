@@ -140,9 +140,6 @@ fun AIChatScreen(
     fun submitMessage(text: String) {
         if (text.isBlank()) return
 
-        // Voice/typed navigation commands act immediately, e.g. "open tasks",
-        // "go to settings" — these move you to the right section instead of
-        // just being sent to Sage as a chat message.
         val navRoute = com.prohub.assistant.service.AppAutomation.tryGetNavigationRoute(text)
         if (navRoute != null) {
             inputText = ""
@@ -182,7 +179,6 @@ fun AIChatScreen(
             override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
 
             override fun onPartialResults(partialResults: android.os.Bundle?) {
-                // Live preview only, while still speaking — does not act yet
                 val text = partialResults
                     ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull()
@@ -194,8 +190,6 @@ fun AIChatScreen(
                     ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                     ?.firstOrNull()
                 isListening = false
-                // Voice command finished — act on it immediately, same as
-                // Sage's "Hey Sage" pipeline, instead of waiting for a manual tap.
                 if (!text.isNullOrBlank()) submitMessage(text)
             }
         })
@@ -227,7 +221,6 @@ fun AIChatScreen(
         isListening = false
     }
 
-    // Auto-start dictation if we arrived here via Home's "Voice" quick action
     LaunchedEffect(Unit) {
         if (com.prohub.assistant.service.VoiceEntryBridge.shouldAutoStart.value) {
             com.prohub.assistant.service.VoiceEntryBridge.consume()
@@ -249,13 +242,21 @@ fun AIChatScreen(
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = ProHubColors.Bg
+        containerColor = ProHubColors.Bg,
+        // Let Scaffold report the full window including IME insets so that
+        // imePadding() below can consume them and push the layout up above
+        // the keyboard — without this the input bar stays hidden underneath.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp)
+                // imePadding() expands the bottom padding by exactly the
+                // keyboard height when it is open, so the input row is always
+                // visible above the keyboard.
+                .imePadding()
         ) {
             LazyColumn(
                 modifier = Modifier.weight(1f),
@@ -312,10 +313,11 @@ fun AIChatScreen(
                 }
             }
 
+            // Input bar — now always visible above the keyboard
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(bottom = 8.dp),
                 shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(containerColor = ProHubColors.Card),
                 border = androidx.compose.foundation.BorderStroke(1.dp, ProHubColors.Border),
@@ -324,7 +326,7 @@ fun AIChatScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextField(
@@ -342,13 +344,20 @@ fun AIChatScreen(
                             unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
                             cursorColor = ProHubColors.Indigo
                         ),
-                        maxLines = 4
+                        // Capped at 3 lines so the bar stays compact and
+                        // doesn't eat into the chat area when typing a long message.
+                        maxLines = 3,
+                        textStyle = MaterialTheme.typography.bodyMedium
                     )
-                    IconButton(onClick = { if (isListening) stopListening() else startListening() }) {
+                    IconButton(
+                        onClick = { if (isListening) stopListening() else startListening() },
+                        modifier = Modifier.size(40.dp)
+                    ) {
                         Icon(
                             Icons.Default.Mic,
                             contentDescription = if (isListening) "Stop listening" else "Voice input",
-                            tint = if (isListening) ProHubColors.Red else ProHubColors.Text2
+                            tint = if (isListening) ProHubColors.Red else ProHubColors.Text2,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                     IconButton(
@@ -357,12 +366,14 @@ fun AIChatScreen(
                                 submitMessage(inputText)
                             }
                         },
-                        enabled = !isLoading && inputText.isNotBlank()
+                        enabled = !isLoading && inputText.isNotBlank(),
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
                             Icons.Default.Send,
                             contentDescription = "Send",
-                            tint = if (inputText.isNotBlank() && !isLoading) ProHubColors.Indigo else ProHubColors.Muted
+                            tint = if (inputText.isNotBlank() && !isLoading) ProHubColors.Indigo else ProHubColors.Muted,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
