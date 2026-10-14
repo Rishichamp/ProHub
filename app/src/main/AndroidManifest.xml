@@ -53,9 +53,11 @@
             </intent-filter>
         </service>
 
+        <!-- Only fired by the app's own AlarmManager PendingIntent; not exported,
+             so other apps can't send it fake reminder broadcasts. -->
         <receiver
             android:name=".service.ReminderAlarmReceiver"
-            android:exported="true" />
+            android:exported="false" />
 
         <receiver
             android:name=".worker.ReminderActionReceiver"
