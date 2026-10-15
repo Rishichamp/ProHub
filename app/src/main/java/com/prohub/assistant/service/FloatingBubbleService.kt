@@ -428,8 +428,12 @@ class FloatingBubbleService : Service() {
                 })
             }
 
+            // Key in a header, not the URL (URLs end up in logs and error messages).
+            // The -latest alias follows Google's current Flash-Lite model, so a
+            // model retirement doesn't break the assistant.
             val request = Request.Builder()
-                .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=$apiKey")
+                .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent")
+                .header("x-goog-api-key", apiKey)
                 .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
                 .build()
 
