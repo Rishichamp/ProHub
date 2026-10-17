@@ -96,6 +96,10 @@ Before building, you need:
 
 ---
 
+## Author
+
+**Rishi Singh** — [GitHub](https://github.com/Rishichamp)
+
 ## License
 
 This project is available under the MIT License — see [LICENSE](LICENSE) for details.
